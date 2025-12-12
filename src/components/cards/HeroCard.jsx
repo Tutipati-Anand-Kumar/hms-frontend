@@ -22,7 +22,7 @@ const HeroCard = () => {
             <div className="max-w-7xl mx-auto relative z-10">
                 {/* Header Section */}
                 <div className="text-center mb-16">
-                    <div className="inline-flex items-center gap-2 bg-[var(--card-bg)]/50 backdrop-blur-sm rounded-full px-5 py-2 mb-8 border border-[var(--border-color)] shadow-sm">
+                    <div className="inline-flex  mt-5 items-center gap-2 bg-[var(--card-bg)]/50 backdrop-blur-sm rounded-full px-5 py-2 mb-8 border border-[var(--border-color)] shadow-sm">
 
                         <span className="text-sm font-medium text-[var(--secondary-color)]">AI-Powered Healthcare Platform</span>
                     </div>
@@ -153,7 +153,7 @@ const HeroCard = () => {
                     <h3 className="text-2xl font-bold text-[var(--text-color)] mb-4">
                         Ready to Transform Your Healthcare Experience?
                     </h3>
-                    <p className="text-[var(--secondary-color)] mb-8 max-w-2xl mx-auto text-lg">
+                    <p className="text-[var(--secondary-color)] mb-15 max-w-2xl mx-auto text-lg">
                         Join MSCureChain today and be part of India's digital healthcare revolution.
                         Perfect for Tier-2 and Tier-3 cities expanding nationwide.
                     </p>

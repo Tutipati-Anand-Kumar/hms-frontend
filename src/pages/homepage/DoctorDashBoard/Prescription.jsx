@@ -4,12 +4,44 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { API } from "../../../api/authservices/authservice";
 import toast from "react-hot-toast";
-import { X } from "lucide-react";
+import { X, Activity } from "lucide-react";
+import { getPrescriptionTemplate } from "./MedicalRecords";
 
 export default function Prescription() {
     const location = useLocation();
     const navigate = useNavigate();
     const { appointment } = location.state || {};
+
+    const [hospitalDetails, setHospitalDetails] = useState(null);
+    const [doctorDetails, setDoctorDetails] = useState(null);
+
+    // Fetch current doctor's profile to parse qualifications and associated hospital
+    useEffect(() => {
+        const fetchDoctorProfile = async () => {
+            try {
+                const res = await API.get('/doctors/profile/me');
+                if (res.data) {
+                    setDoctorDetails(res.data);
+                    // If hospital is not in appointment, try to get from doctor's profile
+                    if (!appointment?.hospital && res.data.hospitals && res.data.hospitals.length > 0) {
+                        // res.data.hospitals is array of {hospital: {...}, ...} - assuming populated? 
+                        // Or we might need to fetch it. Let's start with id.
+                        const hospInfo = res.data.hospitals[0];
+                        if (hospInfo.hospital && typeof hospInfo.hospital === 'object') {
+                            setHospitalDetails(hospInfo.hospital);
+                        } else if (hospInfo.hospital) {
+                            // If it's just ID, fetch it
+                            const hRes = await API.get(`/hospitals/${hospInfo.hospital}`);
+                            setHospitalDetails(hRes.data);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch doctor profile", e);
+            }
+        };
+        fetchDoctorProfile();
+    }, [appointment]);
 
     const [patients, setPatients] = useState([]);
     const [selectedPatientId, setSelectedPatientId] = useState(appointment?.patient?._id || "");
@@ -34,8 +66,11 @@ export default function Prescription() {
         follow_up: "",
         avoid: [],
         matchedSymptoms: [],
+        weight: "",
+        height: "",
         isGenerated: false // Track if generated/editable per mode
     };
+    const [showVitals, setShowVitals] = useState(false);
 
     // --- STATE MANAGEMENT ---
 
@@ -109,16 +144,66 @@ export default function Prescription() {
 
             if (p) {
                 setPatientName(p.name);
-                // Merge patient static data with appointment specific data (Age, Gender, MRN, Duration)
-                setPatientDetails({
-                    ...p,
-                    age: apptData?.patientDetails?.age || apptData?.age || p.age || '',
-                    gender: apptData?.patientDetails?.gender || apptData?.gender || p.gender || '',
-                    duration: apptData?.patientDetails?.duration || apptData?.duration || ''
-                });
+
+                // RESET currentData vitals to avoid carrying over previous patient's data
+                updateCurrentData({ weight: '', height: '' });
+
+                // Fetch full profile for height/weight
+                const fetchDetails = async () => {
+                    try {
+                        const res = await API.get(`/patients/profile/${selectedPatientId}`);
+                        if (res.data) {
+                            const profile = res.data;
+                            setPatientDetails(prev => ({
+                                ...prev,
+                                ...p,
+                                age: apptData?.patientDetails?.age || apptData?.age || p.age || '',
+                                gender: apptData?.patientDetails?.gender || apptData?.gender || p.gender || '',
+                                duration: apptData?.patientDetails?.duration || apptData?.duration || '',
+                                weight: profile.weight || '',
+                                height: profile.height || '',
+                                userProfileFetched: true
+                            }));
+                        }
+                    } catch (err) {
+                        console.error("Failed to fetch patient profile", err);
+                        // Fallback to existing
+                        setPatientDetails({
+                            ...p,
+                            age: apptData?.patientDetails?.age || apptData?.age || p.age || '',
+                            gender: apptData?.patientDetails?.gender || apptData?.gender || p.gender || '',
+                            duration: apptData?.patientDetails?.duration || apptData?.duration || ''
+                        });
+                    }
+                };
+                fetchDetails();
             }
         }
+
+        const fetchHospital = async () => {
+            if (appointment?.hospital && !hospitalDetails) {
+                if (typeof appointment.hospital === 'string') {
+                    try {
+                        const res = await API.get(`/hospitals/${appointment.hospital}`);
+                        setHospitalDetails(res.data);
+                    } catch (e) {
+                        console.error("Failed to fetch hospital", e);
+                    }
+                } else if (typeof appointment.hospital === 'object') {
+                    setHospitalDetails(appointment.hospital);
+                }
+            }
+        };
+        fetchHospital();
+
     }, [selectedPatientId, patients, patientAppointments]);
+
+    // Auto-fill reason from symptoms if reason is empty
+    useEffect(() => {
+        if (currentData.symptoms && !currentData.reason) {
+            updateCurrentData({ reason: currentData.symptoms });
+        }
+    }, [currentData.symptoms]);
 
     const fetchPatients = async () => {
         try {
@@ -192,6 +277,9 @@ export default function Prescription() {
                 follow_up: data.follow_up || "",
                 avoid: Array.isArray(data.avoid) ? data.avoid : (data.avoid ? [data.avoid] : []),
                 matchedSymptoms: data.matchedSymptoms || [],
+
+                weight: patientDetails?.weight || "",
+                height: patientDetails?.height || "",
                 isGenerated: true
             });
 
@@ -258,73 +346,39 @@ export default function Prescription() {
         const toastId = toast.loading("Generating and uploading PDF...");
 
         try {
-            const cleanHtml = `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; background: #fff; color: #333;">
-          
-          <div style="text-align: center; margin-bottom: 40px; border-bottom: 2px solid #2563eb; padding-bottom: 20px;">
-            <h2 style="color: #2563eb; font-size: 28px; margin: 0; text-transform: uppercase; letter-spacing: 1px;">PRESCRIPTION</h2>
-            <p style="margin: 5px 0 0; color: #666; font-size: 14px;">Generated by MScureChain</p>
-          </div>
+            const templateData = {
+                hospitalName: hospitalDetails?.name || "",
+                hospitalAddress: hospitalDetails?.address || "",
+                hospitalPhone: hospitalDetails?.phone || "",
+                hospitalEmail: hospitalDetails?.email || "",
+                patientName: patientName,
+                age: patientDetails?.age || "",
+                gender: patientDetails?.gender || "",
+                // Use currentData for vitals as they might be edited
+                weight: currentData.weight || patientDetails?.weight || "",
+                height: currentData.height || patientDetails?.height || "",
+                date: new Date().toLocaleDateString(),
+                mrn: patientDetails?.mrn || appointment?.mrn || "",
+                symptoms: currentData.symptoms,
+                diagnosis: currentData.reason,
+                medicines: currentData.medicines.filter(m => m.trim() !== ""),
+                dietAdvice: currentData.diet_advice.filter(d => d.trim() !== ""),
+                tests: currentData.suggested_tests.filter(t => t.trim() !== ""),
+                followUp: currentData.follow_up,
+                avoid: currentData.avoid,
 
-          <div style="display: flex; justify-content: space-between; margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px;">
-            <div>
-              <p style="margin: 5px 0;"><strong>Patient:</strong> ${patientName}</p>
-              <p style="margin: 5px 0;"><strong>Age/Gender:</strong> ${patientDetails?.age || 'N/A'} / ${patientDetails?.gender || 'N/A'}</p>
-              <p style="margin: 5px 0;"><strong>Duration:</strong> ${patientDetails?.duration || 'N/A'}</p>
-            </div>
-            <div style="text-align: right;">
-              <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-              <p style="margin: 5px 0;"><strong>MRN:</strong> ${appointment?.mrn || patientDetails?.mrn || 'N/A'}</p>
-            </div>
-          </div>
-          
-          <div style="margin-bottom:20px;">
-            <h3 style="color:#2563eb; border-bottom:1px solid #eee; padding-bottom:5px;">MEDICINES</h3>
-            <ul style="list-style:none; padding:0;">
-              ${currentData.medicines.map(m => `<li style="padding:5px 0; border-bottom:1px dashed #eee;">${m}</li>`).join('')}
-            </ul>
-          </div>
-          
-          <div style="display:flex; gap:20px; margin-bottom:20px;">
-            <div style="flex:1;">
-              <h3 style="color:#2563eb; border-bottom:1px solid #eee; padding-bottom:5px;">DIET ADVICE</h3>
-              <ul style="padding-left:20px;">
-                ${currentData.diet_advice.map(d => `<li>${d}</li>`).join('')}
-              </ul>
-            </div>
-            <div style="flex:1;">
-              <h3 style="color:#2563eb; border-bottom:1px solid #eee; padding-bottom:5px;">TESTS</h3>
-              <ul style="padding-left:20px;">
-                ${currentData.suggested_tests.map(t => `<li>${t}</li>`).join('')}
-              </ul>
-            </div>
-          </div>
+                // Dynamic Doctor Details from Profile
+                doctorName: doctorDetails?.user?.name || doctorDetails?.name || appointment?.doctor?.name || "",
+                doctorQual: doctorDetails?.qualifications?.join(', ') || "",
+                doctorSpecialization: doctorDetails?.specialties?.[0] || doctorDetails?.specialization || "",
 
-          <div style="margin-bottom:20px;">
-             <h3 style="color:#2563eb; border-bottom:1px solid #eee; padding-bottom:5px;">FOLLOW UP</h3>
-             <p>${currentData.follow_up}</p>
-          </div>
+                doctorSig: signature,
+                doctorSigText: doctorSignatureText,
+                qrCodeUrl: null,
+                showVitals: showVitals
+            };
 
-          <div style="margin-bottom:30px;">
-             <h3 style="color:#2563eb; border-bottom:1px solid #eee; padding-bottom:5px;">AVOID</h3>
-             <ul style="padding-left:20px;">
-                ${currentData.avoid.map(a => `<li>${a}</li>`).join('')}
-             </ul>
-          </div>
-
-          <div style="margin-top:60px; display: flex; justify-content: flex-end;">
-            <div style="text-align: center; width: 250px;">
-                ${signature
-                    ? `<img src="${signature}" style="height:60px; margin-bottom:10px; display:block; margin: 0 auto;" />`
-                    : (doctorSignatureText
-                        ? `<div style="height:60px; margin-bottom:10px; font-family: 'Brush Script MT', cursive; font-size: 24px; color: #000; display:flex; align-items:center; justify-content:center;">${doctorSignatureText}</div>`
-                        : '<div style="height:60px;"></div>')
-                }
-                <p style="border-top:1px solid #ccc; padding-top:5px; margin: 0;">Doctor's Signature</p>
-            </div>
-          </div>
-        </div>
-      `;
+            const cleanHtml = getPrescriptionTemplate(templateData);
 
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = cleanHtml;
@@ -444,6 +498,7 @@ export default function Prescription() {
                                     <option key={p._id} value={p._id}>{p.name} ({p.mobile})</option>
                                 ))}
                             </select>
+
                         </div>
                         <div>
                             <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Patient Name</label>
@@ -456,61 +511,101 @@ export default function Prescription() {
                         </div>
                     </div>
 
-                    {/* Additional Patient Details: Age, Gender, Date, MRN */}
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6">
-                        <div>
-                            <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Age</label>
-                            <input
-                                className="w-full p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                                style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
-                                value={patientDetails?.age || ''}
-                                onChange={(e) => setPatientDetails(prev => ({ ...prev, age: e.target.value }))}
-                                placeholder="Age"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Gender</label>
-                            <select
-                                className="w-full p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                                style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
-                                value={patientDetails?.gender || ''}
-                                onChange={(e) => setPatientDetails(prev => ({ ...prev, gender: e.target.value }))}
-                            >
-                                <option value="">Select</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Duration</label>
-                            <input
-                                className="w-full p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                                style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
-                                value={patientDetails?.duration || ''}
-                                onChange={(e) => setPatientDetails(prev => ({ ...prev, duration: e.target.value }))}
-                                placeholder="Duration"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Date</label>
-                            <input
-                                className="w-full p-2 rounded-lg text-sm cursor-not-allowed opacity-70"
-                                style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
-                                value={new Date().toLocaleDateString()}
-                                readOnly
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>MRN</label>
-                            <input
-                                className="w-full p-2 rounded-lg text-sm cursor-not-allowed opacity-70"
-                                style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
-                                value={patientDetails?.mrn || appointment?.mrn || 'N/A'}
-                                readOnly
-                            />
+                    {/* Additional Patient Details: Age, Gender, Date, MRN + Vitals Toggle */}
+                    <div className="mt-6 relative">
+                        {/* GRID LAYOUT: Added cols for vitals to ensure inline flow */}
+                        <div className={`grid grid-cols-2 ${showVitals ? 'md:grid-cols-4 lg:grid-cols-8' : 'md:grid-cols-3 lg:grid-cols-6'} gap-3 items-end transition-all duration-300`}>
+                            <div>
+                                <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Age</label>
+                                <input
+                                    className="w-full p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                    style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
+                                    value={patientDetails?.age || ''}
+                                    onChange={(e) => setPatientDetails(prev => ({ ...prev, age: e.target.value }))}
+                                    placeholder="Age"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Gender</label>
+                                <select
+                                    className="w-full p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                    style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
+                                    value={patientDetails?.gender || ''}
+                                    onChange={(e) => setPatientDetails(prev => ({ ...prev, gender: e.target.value }))}
+                                >
+                                    <option value="">Select</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Duration</label>
+                                <input
+                                    className="w-full p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                    style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
+                                    value={patientDetails?.duration || ''}
+                                    onChange={(e) => setPatientDetails(prev => ({ ...prev, duration: e.target.value }))}
+                                    placeholder="Amount"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Date</label>
+                                <input
+                                    className="w-full p-2 rounded-lg text-sm cursor-not-allowed opacity-70"
+                                    style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
+                                    value={new Date().toLocaleDateString()}
+                                    readOnly
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>MRN</label>
+                                <input
+                                    className="w-full p-2 rounded-lg text-sm cursor-not-allowed opacity-70"
+                                    style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
+                                    value={patientDetails?.mrn || appointment?.mrn || 'N/A'}
+                                    readOnly
+                                />
+                            </div>
+
+                            {/* Toggle Button */}
+                            <div className="flex flex-col items-center justify-end pb-1">
+                                <span className="text-[10px] text-gray-400 mb-1 font-medium whitespace-nowrap">View Vitals</span>
+                                <button
+                                    onClick={() => setShowVitals(!showVitals)}
+                                    className={`p-2 rounded-full transition-colors ${showVitals ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                    title={showVitals ? "Hide Vitals" : "Show Vitals (Height/Weight)"}
+                                >
+                                    <Activity size={18} />
+                                </button>
+                            </div>
+
+                            {/* CONDITIONAL INPUTS IN GRID - DIRECTLY HERE */}
+                            {showVitals && (
+                                <>
+                                    <div className="animate-in fade-in zoom-in duration-300">
+                                        <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Weight (kg)</label>
+                                        <input
+                                            className="w-full p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 border border-amber-200"
+                                            placeholder="kg"
+                                            value={currentData.weight || patientDetails?.weight || ''}
+                                            onChange={(e) => updateCurrentData({ weight: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="animate-in fade-in zoom-in duration-300">
+                                        <label className="block text-xs uppercase font-bold text-gray-500 mb-1" style={{ color: 'var(--secondary-color)' }}>Height (cm)</label>
+                                        <input
+                                            className="w-full p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 border border-amber-200"
+                                            placeholder="cm"
+                                            value={currentData.height || patientDetails?.height || ''}
+                                            onChange={(e) => updateCurrentData({ height: e.target.value })}
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
+
                 </div>
 
                 {/* Symptoms & Diagnosis */}
@@ -796,34 +891,24 @@ export default function Prescription() {
                 )}
 
                 {/* Actions */}
-                <div className="flex justify-center gap-4 pb-12">
-                    <button
-                        onClick={handleDownload}
-                        disabled={uploadingPDF}
-                        className={`bg-blue-600 max-sm:text-[12px] max-sm:px-4 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition-all transform hover:-translate-y-1 hover:shadow-xl ${uploadingPDF ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                    >
-                        {uploadingPDF ? (
-                            <span className="flex items-center gap-2">
-                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Uploading...
-                            </span>
-                        ) : (
-                            'Save & Download PDF'
-                        )}
-                    </button>
+                <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 pb-12 px-4">
 
                     <button
-                        className="bg-red-500 hover:bg-red-600 text-white  max-sm:text-[12px] max-sm:px-4 px-8 py-3 rounded-lg font-bold shadow-lg transition-all transform hover:-translate-y-1 hover:shadow-xl"
+                        onClick={handleDownload}
+                        disabled={uploadingPDF || !currentData.medicines || currentData.medicines.length === 0 || (!signature && !doctorSignatureText)}
+                        className="w-full sm:w-auto px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2"
+                    >
+                        {uploadingPDF ? 'Generating...' : 'Save & Download'}
+                    </button>
+                    <button
                         onClick={handleClear}
+                        className="w-full sm:w-auto px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base rounded-lg font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all"
                     >
                         Clear All
                     </button>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
+
     );
 }

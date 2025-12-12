@@ -77,7 +77,7 @@ const LandingPage = () => {
 
                         <button
                             onClick={() => document.getElementById('get-started').scrollIntoView({ behavior: 'smooth' })}
-                            className="bg-blue-600 hover:bg-blue-700 max-sm:text-[12px] text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                            className="bg-blue-600 hover:bg-blue-700 max-sm:text-[10px] text-white px-2 py-1 rounded-lg text-sm font-medium transition-all"
                         >
                             Get Started
                         </button>

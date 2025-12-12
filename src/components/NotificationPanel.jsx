@@ -10,7 +10,7 @@ const NotificationPanel = ({
     loading
 }) => {
     return (
-        <div className="absolute right-0 mt-2 w-80 md:w-96 rounded-lg shadow-xl border z-50 overflow-hidden"
+        <div className="absolute right-0 mt-2 max-[600px]:w-70 max-[600px]:left-[-130px] max-[600px]:top-11 md:w-96 max-[1000px]:left-[-220px] max-[1000px]:top-12 rounded-lg shadow-xl border z-50 overflow-hidden"
             style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
             {/* Header */}
             <div className="p-4 border-b flex justify-between items-center"

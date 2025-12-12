@@ -54,6 +54,7 @@ import Settings from "../pages/common/Settings";
 import SupportDashboard from "../pages/support/SupportDashboard";
 import CreateTicket from "../pages/support/CreateTicket";
 import TicketDetail from "../pages/support/TicketDetail";
+import NotFoundPage from "../components/cards/NotFoundPage";
 
 
 let route = createBrowserRouter([
@@ -200,17 +201,7 @@ let route = createBrowserRouter([
 
   {
     path: "*",
-    element: (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center bg-[#0f172a] text-white">
-        <h1 className="text-3xl font-bold mb-4">Page Not Found</h1>
-        <p className="mb-6">
-          Sorry, the page you are looking for does not exist.
-        </p>
-        <a href="/" className="bg-blue-600 text-white px-4 py-2 rounded">
-          Go to Home
-        </a>
-      </div>
-    ),
-  },
+    element: <NotFoundPage />,
+  }
 ]);
 export default route;

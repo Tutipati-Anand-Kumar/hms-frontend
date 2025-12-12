@@ -39,6 +39,23 @@
   /* Native picker handling via color-scheme is sufficient for modern browsers */
 }
 
+/* FLOATING ANIMATION - Vertical Movement (Fast) */
+@keyframes float-diagonal {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-25px);
+  }
+}
+
+.animate-float-diagonal {
+  animation: float-diagonal 6s ease-in-out infinite;
+}
+
 /* GLOBAL THEME VARIABLES */
 :root {
   --primary-color: #2563eb;
@@ -98,7 +115,6 @@ h6,
 
 /* GLOBAL FONTS */
 body {
-
   background-color: var(--bg-color);
   color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease;

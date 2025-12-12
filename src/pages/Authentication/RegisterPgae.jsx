@@ -171,7 +171,7 @@ const RegisterPage = () => {
         <div className="w-full lg:w-1/2 p-1 md:p-12 flex items-center justify-center" style={{ backgroundColor: 'var(--card-bg)' }}>
           <div className="w-full max-w-md">
             <div className="mb-8">
-              <h2 className="text-3xl font-semibold mb-2" style={{ color: 'var(--text-color)' }}>
+              <h2 className="text-3xl max-[650px]:text-[22px] font-semibold mb-2" style={{ color: 'var(--text-color)' }}>
                 Create Your Account
               </h2>
 

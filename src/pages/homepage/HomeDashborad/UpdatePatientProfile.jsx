@@ -12,7 +12,9 @@ const UpdatePatientProfile = () => {
     dob: "",
     gender: "",
     address: "",
-    age: ""
+    age: "",
+    height: "",
+    weight: ""
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -41,7 +43,9 @@ const UpdatePatientProfile = () => {
           dob: res.dob ? res.dob.split('T')[0] : "",
           gender: res.gender || "",
           address: res.address || "",
-          age: res.age || calculatedAge || ""
+          age: res.age || calculatedAge || "",
+          height: res.height || "",
+          weight: res.weight || ""
         });
       } catch (err) {
         console.error(err);
@@ -140,6 +144,29 @@ const UpdatePatientProfile = () => {
                 className="w-full bg-[var(--bg-color)]/50 text-[var(--secondary-color)] p-3 rounded-lg border border-[var(--border-color)] cursor-not-allowed"
                 placeholder="Calculated from DOB"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[var(--secondary-color)] mb-2 text-sm">Height (cm)</label>
+                <input
+                  type="text"
+                  value={form.height}
+                  onChange={(e) => setForm({ ...form, height: e.target.value })}
+                  className="w-full bg-[var(--bg-color)] text-[var(--text-color)] p-3 rounded-lg border border-[var(--border-color)] focus:border-blue-500 outline-none transition-colors"
+                  placeholder="Ex: 175"
+                />
+              </div>
+              <div>
+                <label className="block text-[var(--secondary-color)] mb-2 text-sm">Weight (kg)</label>
+                <input
+                  type="text"
+                  value={form.weight}
+                  onChange={(e) => setForm({ ...form, weight: e.target.value })}
+                  className="w-full bg-[var(--bg-color)] text-[var(--text-color)] p-3 rounded-lg border border-[var(--border-color)] focus:border-blue-500 outline-none transition-colors"
+                  placeholder="Ex: 70"
+                />
+              </div>
             </div>
 
             <div>

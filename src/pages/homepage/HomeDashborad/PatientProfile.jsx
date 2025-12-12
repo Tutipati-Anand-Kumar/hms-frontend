@@ -92,49 +92,69 @@ const PatientProfile = () => {
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InfoItem
-              icon={Mail}
-              label="Email Address"
-              value={profile.user?.email || profile.email}
-              color="text-emerald-400"
-              bgColor="bg-emerald-400/10"
-            />
-            <InfoItem
-              icon={Phone}
-              label="Phone Number"
-              value={profile.user?.mobile || profile.mobile}
-              color="text-violet-400"
-              bgColor="bg-violet-400/10"
-            />
-            <InfoItem
-              icon={Calendar}
-              label="Date of Birth"
-              value={profile.dob ? new Date(profile.dob).toLocaleDateString() : null}
-              color="text-amber-400"
-              bgColor="bg-amber-400/10"
-            />
-            <InfoItem
-              icon={Activity}
-              label="Age"
-              value={getAge(profile.dob)}
-              color="text-rose-400"
-              bgColor="bg-rose-400/10"
-            />
-            <InfoItem
-              icon={User}
-              label="Gender"
-              value={profile.gender}
-              color="text-cyan-400"
-              bgColor="bg-cyan-400/10"
-            />
-            <InfoItem
-              icon={MapPin}
-              label="Address"
-              value={profile.address}
-              color="text-indigo-400"
-              bgColor="bg-indigo-400/10"
-              fullWidth
-            />
+            {/* Left Column */}
+            <div className="space-y-6">
+              <InfoItem
+                icon={Mail}
+                label="Email Address"
+                value={profile.user?.email || profile.email}
+                color="text-emerald-400"
+                bgColor="bg-emerald-400/10"
+              />
+              <InfoItem
+                icon={Phone}
+                label="Phone Number"
+                value={profile.user?.mobile || profile.mobile}
+                color="text-violet-400"
+                bgColor="bg-violet-400/10"
+              />
+              <InfoItem
+                icon={MapPin}
+                label="Address"
+                value={profile.address}
+                color="text-indigo-400"
+                bgColor="bg-indigo-400/10"
+              />
+              <InfoItem
+                icon={User}
+                label="Gender"
+                value={profile.gender}
+                color="text-cyan-400"
+                bgColor="bg-cyan-400/10"
+              />
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              <InfoItem
+                icon={Activity}
+                label="Age"
+                value={getAge(profile.dob)}
+                color="text-rose-400"
+                bgColor="bg-rose-400/10"
+              />
+              <InfoItem
+                icon={Activity}
+                label="Height"
+                value={profile.height ? `${profile.height} cm` : null}
+                color="text-teal-400"
+                bgColor="bg-teal-400/10"
+              />
+              <InfoItem
+                icon={Activity}
+                label="Weight"
+                value={profile.weight ? `${profile.weight} kg` : null}
+                color="text-orange-400"
+                bgColor="bg-orange-400/10"
+              />
+              <InfoItem
+                icon={Calendar}
+                label="Date of Birth"
+                value={profile.dob ? new Date(profile.dob).toLocaleDateString() : null}
+                color="text-amber-400"
+                bgColor="bg-amber-400/10"
+              />
+            </div>
           </div>
         </div>
 
