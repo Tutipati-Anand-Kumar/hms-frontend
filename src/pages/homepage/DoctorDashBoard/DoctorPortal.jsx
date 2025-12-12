@@ -112,14 +112,13 @@ export default function DoctorPortal() {
                 </div>
               )}
             </div>
-            <button
+          </div>
+          <button
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-2 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <Menu size={24} />
             </button>
-
-          </div>
         </div>
       </div>
 
