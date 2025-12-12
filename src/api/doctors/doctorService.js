@@ -1,7 +1,5 @@
 import { API } from "../authservices/authservice";
 
-
-
 export const searchDoctors = async (query = {}) => {
   try {
     const params = new URLSearchParams(query).toString();

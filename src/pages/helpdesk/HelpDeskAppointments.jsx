@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import { API } from "../../api/authservices/authservice";
+import { API, BASE_URL } from "../../api/authservices/authservice";
 import {
     FaCheck,
     FaTimes,
@@ -27,9 +27,7 @@ const HelpDeskAppointments = () => {
         fetchHospitalId();
 
         // SOCKET CONNECTION MERGED (both versions matched)
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const socketUrl = apiUrl.replace("/api", "");
-        const socket = io(socketUrl, { transports: ["websocket"] });
+        const socket = io(BASE_URL, { transports: ["websocket"] });
 
         socket.on("connect", () => {
             console.log("Helpdesk Socket Connected");

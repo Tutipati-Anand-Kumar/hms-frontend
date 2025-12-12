@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { API, getActiveUser } from "../../api/authservices/authservice";
+import { API, getActiveUser, BASE_URL } from "../../api/authservices/authservice";
 import io from "socket.io-client";
 import { FaUserMd, FaSearch, FaArrowLeft, FaTrash, FaReply, FaCheck, FaTimes, FaEllipsisV, FaCheckDouble } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 
-const ENDPOINT = "http://localhost:3000";
+const ENDPOINT = BASE_URL;
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     if (!isOpen) return null;

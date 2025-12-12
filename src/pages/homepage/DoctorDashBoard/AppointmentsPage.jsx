@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { API } from "../../../api/authservices/authservice";
+import { API, BASE_URL } from "../../../api/authservices/authservice";
 import { FaPlay, FaTimes, FaBan } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -15,7 +15,7 @@ export default function AppointmentsPage() {
     fetchAppointments();
 
     // Initialize Socket
-    const newSocket = io(import.meta.env.VITE_API_URL || "http://localhost:3000");
+    const newSocket = io(BASE_URL);
     setSocket(newSocket);
 
     return () => newSocket.close();
@@ -127,9 +127,9 @@ export default function AppointmentsPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-lg font-semibold" style={{ color: 'var(--text-color)' }}>{app.patient?.name}</h3>
                     <span className={`text-sm font-bold uppercase ${app.status === 'confirmed' ? 'text-green-600' :
-                        app.status === 'pending' ? 'text-yellow-600' :
-                          app.status === 'cancelled' ? 'text-red-600' :
-                            app.status === 'completed' ? 'text-blue-600' : 'text-gray-500'
+                      app.status === 'pending' ? 'text-yellow-600' :
+                        app.status === 'cancelled' ? 'text-red-600' :
+                          app.status === 'completed' ? 'text-blue-600' : 'text-gray-500'
                       }`}>
                       {app.status}
                     </span>

@@ -1,10 +1,14 @@
 import axios from "axios";
 
-const API = axios.create({
-  baseURL: "http://localhost:3000/api",
-});
-
 const isDev = import.meta.env.MODE === "development";
+
+export const BASE_URL = isDev
+  ? "http://localhost:3000"
+  : "https://hms-backend-1qt4.onrender.com";
+
+const API = axios.create({
+  baseURL: `${BASE_URL}/api`,
+});
 
 export const setAuthTokens = (userId, tokens) => {
   if (!tokens) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { API, getActiveUser } from "../../../api/authservices/authservice";
+import { API, getActiveUser, BASE_URL } from "../../../api/authservices/authservice";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
@@ -368,10 +368,7 @@ export default function NewDoctorDashboard() {
     }, 10000); // 10s
 
     // Socket Listener for Real-time Updates
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-    const socketUrl = apiUrl.replace("/api", "");
-
-    const newSocket = io(socketUrl, {
+    const newSocket = io(BASE_URL, {
       reconnection: true,
     });
 

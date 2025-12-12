@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { API, getActiveUser } from "../../../api/authservices/authservice";
+import { API, getActiveUser, BASE_URL } from "../../../api/authservices/authservice";
 import io from "socket.io-client";
 import { FaPaperPlane, FaSearch, FaArrowLeft, FaTrash, FaReply, FaCheck, FaTimes, FaEllipsisV, FaCheckDouble } from "react-icons/fa";
 
-const ENDPOINT = "http://localhost:3000";
+const ENDPOINT = BASE_URL;
 
 // Custom Confirmation Modal Component
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
