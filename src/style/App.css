@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  box-sizing: border-box;
+
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+@layer base {
+
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"] {
+    @apply outline-none focus:ring-2 focus:ring-black dark:focus:ring-white rounded-lg px-3 py-2 border;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+
+    /* Ensure native picker matches theme */
+    color-scheme: light;
+  }
+
+  /* Dark Mode specific overrides */
+  [data-theme='dark'] input[type="date"],
+  [data-theme='dark'] input[type="time"],
+  [data-theme='dark'] input[type="datetime-local"],
+  [data-theme='dark'] input[type="month"] {
+    color-scheme: dark;
+  }
+
+  /* Invert calendar icon in dark mode so it's white */
+  /* Native picker handling via color-scheme is sufficient for modern browsers */
+}
+
+/* GLOBAL THEME VARIABLES */
+:root {
+  --primary-color: #2563eb;
+  /* blue-600 */
+  --secondary-color: #64748b;
+  /* slate-500 */
+  --bg-color: #ffffff;
+  --text-color: #0f172a;
+  /* slate-900 */
+  --card-bg: #f8fafc;
+  /* slate-50 */
+  --border-color: #e2e8f0;
+  /* slate-200 */
+  --sidebar-bg: #ffffff;
+  /* white */
+  --navbar-bg: #ffffff;
+
+  --heading-font: "inter", sans-serif;
+  --body-font: "quicksand", sans-serif;
+}
+
+html,
+body,
+#root {
+  font-family: var(--body-font);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.heading {
+  font-family: var(--heading-font);
+  font-weight: 600;
+}
+
+[data-theme='dark'] {
+  --primary-color: #3b82f6;
+  /* blue-500 */
+  --secondary-color: #94a3b8;
+  /* slate-400 */
+  --bg-color: #0f172a;
+  /* slate-900 */
+  --text-color: #f8fafc;
+  /* slate-50 */
+  --card-bg: #1e293b;
+  /* slate-800 */
+  --border-color: #334155;
+  /* slate-700 */
+  --sidebar-bg: #0f172a;
+  /* slate-900 */
+  --navbar-bg: #1e293b;
+  /* slate-800 */
+}
+
+/* GLOBAL FONTS */
+body {
+
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}

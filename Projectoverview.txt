@@ -1,0 +1,1190 @@
+================================================================================
+                    HOSPITAL MANAGEMENT SYSTEM (MSCureChain)
+                          PROJECT INFORMATION DOCUMENT
+================================================================================
+
+PROJECT OVERVIEW
+================================================================================
+MSCureChain is a comprehensive Hospital Management System designed to streamline
+healthcare operations for hospitals, doctors, patients, and administrative staff.
+The system provides digital solutions for OPD management, appointment booking,
+prescription management, and patient record keeping.
+
+TECHNOLOGY STACK
+================================================================================
+Frontend:
+- React.js (with React Router for navigation)
+- Tailwind CSS (for styling)
+- Lucide React (for icons)
+- React Hot Toast (for notifications)
+- Axios (for API calls)
+
+Backend:
+- Node.js with Express.js
+- MongoDB (database)
+- JWT (authentication)
+
+Theme System:
+- CSS Variables for dynamic dark/light theme switching
+- Theme stored in localStorage
+- Automatic theme persistence across sessions
+
+
+USER ROLES & ACCESS
+================================================================================
+
+1. PATIENT
+   - Access: Patient Dashboard (/home)
+   - Capabilities: Book appointments, view medical records, manage prescriptions
+
+2. DOCTOR
+   - Access: Doctor Dashboard (/doctor)
+   - Capabilities: Manage appointments, create prescriptions, view patients
+
+3. ADMIN / SUPER-ADMIN
+   - Access: Admin Dashboard (/admin)
+   - Capabilities: Manage users, hospitals, doctors, helpdesk staff
+
+4. HELPDESK
+   - Access: HelpDesk Dashboard (/helpdesk)
+   - Capabilities: Manage appointments, assist patients, create doctors
+
+
+PAGES & FUNCTIONALITY
+================================================================================
+
+PUBLIC PAGES
+--------------------------------------------------------------------------------
+
+1. LANDING PAGE (/)
+   Route: /
+   File: src/pages/homepage/LandingPage.jsx
+   
+   Features:
+   - Hero section with call-to-action buttons
+   - Feature highlights (Privacy First, Real-time Updates, Unified Records)
+   - Technology stack showcase
+   - User consent and registration flow
+   - Theme toggle (dark/light mode)
+   - Terms & Conditions modal
+   
+   Actions:
+   - Navigate to Login page
+   - Navigate to Register page
+   - View Terms & Conditions
+   - Toggle theme
+
+
+2. LOGIN PAGE (/login)
+   Route: /login
+   File: src/pages/Authentication/LoginPage.jsx
+   
+   Features:
+   - Login with mobile number or doctor ID
+   - Password authentication with show/hide toggle
+   - Forgot password functionality
+   - QR code login option (placeholder)
+   - Role-based redirection after login
+   
+   Actions:
+   - Login as Patient/Doctor/Admin/HelpDesk
+   - Request password reset via email
+   - Navigate to Register page
+   
+   Validation:
+   - Mobile number: 10 digits starting with 6-9
+   - Doctor ID: Alphanumeric
+   - Password: Minimum 6 characters
+
+
+3. REGISTER PAGE (/register)
+   Route: /register
+   File: src/pages/Authentication/RegisterPgae.jsx
+   
+   Features:
+   - User registration with OTP verification
+   - Email and mobile number validation
+   - Password strength requirements
+   - QR code registration option (placeholder)
+   
+   Actions:
+   - Send OTP to email/mobile
+   - Verify OTP and create account
+   - Navigate to Login page
+   
+   Validation:
+   - Name: 3-30 letters
+   - Email: Valid email format
+   - Mobile: 10 digits starting with 6-9
+   - Password: Must start with uppercase, 6+ characters
+   - OTP: 6 digits
+
+
+4. FORGOT PASSWORD (/forgotpassword)
+   Route: /forgotpassword
+   File: src/pages/Authentication/ForgotPassword.jsx
+   
+   Features:
+   - Email-based password reset
+   - Reset link sent to registered email
+   
+   Actions:
+   - Request password reset link
+   - Navigate back to Login
+
+
+5. RESET PASSWORD (/reset-password/:token)
+   Route: /reset-password/:token
+   File: src/pages/Authentication/ResetPassword.jsx
+   
+   Features:
+   - Token-based password reset
+   - New password confirmation
+   
+   Actions:
+   - Set new password
+   - Navigate to Login after successful reset
+
+
+6. 404 PAGE (*)
+   Route: * (catch-all)
+   File: src/routes/Route.jsx
+   
+   Features:
+   - Page not found message
+   - Link to return to home page
+
+
+PATIENT DASHBOARD
+--------------------------------------------------------------------------------
+
+Main Layout: src/pages/homepage/HomeDashborad/Home.jsx
+Route: /home
+
+Sidebar Menu:
+- Dashboard
+- Appointments
+- Medical Records
+- AI Symptom Checker
+- Prescriptions
+- Billing
+- Settings
+
+7. PATIENT DASHBOARD HOME (/home)
+   Route: /home (index)
+   File: src/pages/homepage/HomeDashborad/DashboardHome.jsx
+   
+   Features:
+   - Overview of patient's health information
+   - Quick access to recent appointments
+   - Prescription summary
+   - Health metrics
+
+
+8. APPOINTMENTS (/home/appointments)
+   Route: /home/appointments
+   File: src/pages/homepage/HomeDashborad/Appointments.jsx
+   
+   Features:
+   - View upcoming and past appointments
+   - Book new appointments
+   - Cancel/reschedule appointments
+   - Search and filter appointments
+   
+   Actions:
+   - Book appointment with doctor
+   - View appointment details
+   - Cancel appointment
+   - Reschedule appointment
+
+
+9. MEDICAL RECORDS (/home/records)
+   Route: /home/records
+   File: src/pages/homepage/HomeDashborad/MedicalRecords.jsx
+   
+   Features:
+   - View complete medical history
+   - Download medical records
+   - Search records by date/type
+   
+   Actions:
+   - View record details
+   - Download records
+   - Filter by date range
+
+
+10. AI SYMPTOM CHECKER (/home/aisymptomchecker)
+    Route: /home/aisymptomchecker
+    File: src/pages/homepage/HomeDashborad/Messages.jsx
+    
+    Features:
+    - AI-powered symptom analysis
+    - Chat interface for symptom input
+    - Health recommendations
+    
+    Actions:
+    - Describe symptoms
+    - Get AI-based recommendations
+    - View chat history
+
+
+11. PRESCRIPTIONS (/home/prescriptions)
+    Route: /home/prescriptions
+    File: src/pages/homepage/HomeDashborad/Prescriptions.jsx
+    
+    Features:
+    - View all prescriptions
+    - Search prescriptions
+    - Download prescription PDFs
+    
+    Actions:
+    - View prescription details
+    - Download prescription
+    - Search by doctor/date
+
+
+12. PRESCRIPTION DETAILS (/home/prescriptions/:id)
+    Route: /home/prescriptions/:id
+    File: src/pages/homepage/HomeDashborad/PrescriptionDetails.jsx
+    
+    Features:
+    - Detailed prescription view
+    - Medication list with dosage
+    - Doctor's notes
+    - Download option
+
+
+13. BILLING (/home/billing)
+    Route: /home/billing
+    File: src/pages/homepage/HomeDashborad/Billing.jsx
+    
+    Features:
+    - View billing history
+    - Payment status
+    - Download invoices
+    
+    Actions:
+    - View bill details
+    - Download invoice
+    - Make payment
+
+
+14. PATIENT PROFILE (/home/patient/profile)
+    Route: /home/patient/profile
+    File: src/pages/homepage/HomeDashborad/PatientProfile.jsx
+    
+    Features:
+    - View personal information
+    - Contact details
+    - Emergency contact
+    - Logout option
+    
+    Actions:
+    - View profile details
+    - Navigate to edit profile
+    - Logout
+
+
+15. UPDATE PATIENT PROFILE (/home/patient/profile/edit)
+    Route: /home/patient/profile/edit
+    File: src/pages/homepage/HomeDashborad/UpdatePatientProfile.jsx
+    
+    Features:
+    - Edit personal information
+    - Update contact details
+    - Change password
+    
+    Actions:
+    - Update profile information
+    - Save changes
+    - Cancel and go back
+
+
+DOCTOR DASHBOARD
+--------------------------------------------------------------------------------
+
+Main Layout: src/pages/homepage/DoctorDashBoard/DoctorPortal.jsx
+Route: /doctor
+
+Sidebar Menu:
+- Dashboard
+- Patients
+- Appointments
+- Prescription
+- Front Desk
+- Analytics
+- Leaves
+- Calendar
+- Settings
+
+16. DOCTOR DASHBOARD HOME (/doctor)
+    Route: /doctor (index)
+    File: src/pages/homepage/DoctorDashBoard/NewDoctorDashboard.jsx
+    
+    Features:
+    - Today's appointment summary
+    - Patient statistics
+    - Quick notes section (WhatsApp-style)
+    - Recent activities
+    - Performance metrics
+    
+    Actions:
+    - View today's appointments
+    - Add/view quick notes
+    - Navigate to appointments
+    - View patient details
+
+
+17. PATIENTS (/doctor/patients)
+    Route: /doctor/patients
+    File: src/pages/homepage/DoctorDashBoard/PatientsPage.jsx
+    
+    Features:
+    - List of all patients
+    - Patient search and filter
+    - Patient medical history
+    
+    Actions:
+    - View patient details
+    - Search patients
+    - View patient history
+
+
+18. DOCTOR APPOINTMENTS (/doctor/appointments)
+    Route: /doctor/appointments
+    File: src/pages/homepage/DoctorDashBoard/AppointmentsPage.jsx
+    
+    Features:
+    - View all appointments
+    - Filter by date/status
+    - Appointment management
+    
+    Actions:
+    - View appointment details
+    - Mark appointment as completed
+    - Cancel/reschedule appointments
+
+
+19. PRESCRIPTION (/doctor/prescription)
+    Route: /doctor/prescription
+    File: src/pages/homepage/DoctorDashBoard/Prescription.jsx
+    
+    Features:
+    - Create digital prescriptions
+    - Medication database
+    - Prescription templates
+    - Print/download prescriptions
+    
+    Actions:
+    - Create new prescription
+    - Add medications
+    - Save prescription
+    - Print prescription
+
+
+20. FRONT DESK (/doctor/frontdesk)
+    Route: /doctor/frontdesk
+    File: src/pages/homepage/DoctorDashBoard/FrontDeskPage.jsx
+    
+    Features:
+    - Quick patient check-in
+    - Appointment scheduling
+    - Patient queue management
+    
+    Actions:
+    - Check-in patients
+    - Schedule appointments
+    - Manage queue
+
+
+21. ANALYTICS (/doctor/analytics)
+    Route: /doctor/analytics
+    File: src/pages/homepage/DoctorDashBoard/AnalyticsPage.jsx
+    
+    Features:
+    - Patient visit statistics
+    - Revenue analytics
+    - Performance charts
+    - Weekly/monthly reports
+    
+    Visualizations:
+    - Weekly patient visits chart
+    - Revenue trends
+    - Appointment distribution
+
+
+22. LEAVES (/doctor/leaves)
+    Route: /doctor/leaves
+    File: src/pages/homepage/DoctorDashBoard/DoctorLeave.jsx
+    
+    Features:
+    - Apply for leave
+    - View leave history
+    - Leave approval status
+    
+    Actions:
+    - Submit leave request
+    - View leave status
+    - Cancel leave request
+
+
+23. CALENDAR (/doctor/calendar)
+    Route: /doctor/calendar
+    File: src/pages/homepage/DoctorDashBoard/DoctorCalendar.jsx
+    Component: src/components/DoctorScheduleCalendar.jsx
+    
+    Features:
+    - Weekly schedule view
+    - Appointment slots visualization
+    - Daily/weekly totals
+    - Navigate between weeks
+    
+    Actions:
+    - View weekly schedule
+    - Navigate to previous/next week
+    - See appointment distribution
+
+
+24. DOCTOR PROFILE (/doctor/profile)
+    Route: /doctor/profile
+    File: src/pages/homepage/DoctorDashBoard/DoctorProfile.jsx
+    
+    Features:
+    - View doctor information
+    - Specialization details
+    - Contact information
+    
+    Actions:
+    - View profile
+    - Navigate to edit profile
+
+
+25. UPDATE DOCTOR PROFILE (/doctor/profile/edit)
+    Route: /doctor/profile/edit
+    File: src/pages/homepage/DoctorDashBoard/UpdateDoctorProfile.jsx
+    
+    Features:
+    - Edit doctor information
+    - Update specialization
+    - Change profile picture
+    
+    Actions:
+    - Update profile
+    - Upload profile picture
+    - Save changes
+
+
+ADMIN DASHBOARD
+--------------------------------------------------------------------------------
+
+Main Layout: src/pages/admin/AdminLayout.jsx
+Route: /admin
+
+Sidebar Menu:
+- Dashboard
+- All Users
+- Hospitals
+- Doctors
+- Patients
+- Front Desk
+- Create Admin
+- Admins
+- Create Doctor
+- Create HelpDesk
+- Create Hospital
+- Assign Doctor
+- Broadcast
+- Audit Logs
+- Settings
+
+26. ADMIN DASHBOARD (/admin)
+    Route: /admin
+    File: src/pages/admin/AdminDashboard.jsx
+    
+    Features:
+    - System overview statistics
+    - Total users count
+    - Total doctors, patients, hospitals
+    - Recent activities
+    
+    Statistics:
+    - Total Users
+    - Total Doctors
+    - Total Patients
+    - Total Hospitals
+    - Total Admins
+    - Total HelpDesks
+
+
+27. ALL USERS (/admin/users)
+    Route: /admin/users
+    File: src/pages/admin/UsersList.jsx
+    
+    Features:
+    - List of all system users
+    - User search and filter
+    - User role management
+    
+    Actions:
+    - View user details
+    - Search users
+    - Filter by role
+    - Edit user
+
+
+28. HOSPITALS (/admin/hospitals)
+    Route: /admin/hospitals
+    File: src/pages/admin/HospitalsList.jsx
+    
+    Features:
+    - List of all hospitals
+    - Hospital details
+    - Search and filter
+    
+    Actions:
+    - View hospital details
+    - Add new hospital
+    - Edit hospital information
+
+
+29. HOSPITAL DETAILS (/admin/hospitals/:id)
+    Route: /admin/hospitals/:id
+    File: src/pages/admin/HospitalDetails.jsx
+    
+    Features:
+    - Detailed hospital information
+    - Assigned doctors list
+    - Hospital statistics
+    
+    Actions:
+    - View hospital details
+    - Manage assigned doctors
+    - Edit hospital
+
+
+30. DOCTORS LIST (/admin/doctors)
+    Route: /admin/doctors
+    File: src/pages/admin/UsersList.jsx (role="doctor")
+    
+    Features:
+    - List of all doctors
+    - Doctor search and filter
+    - Doctor assignment status
+    
+    Actions:
+    - View doctor details
+    - Search doctors
+    - Assign to hospital
+
+
+31. PATIENTS LIST (/admin/patients)
+    Route: /admin/patients
+    File: src/pages/admin/UsersList.jsx (role="patient")
+    
+    Features:
+    - List of all patients
+    - Patient search
+    - Patient statistics
+
+
+32. HELPDESK LIST (/admin/helpdesks)
+    Route: /admin/helpdesks
+    File: src/pages/admin/UsersList.jsx (role="helpdesk")
+    
+    Features:
+    - List of all helpdesk staff
+    - Search and filter
+    - Assignment status
+
+
+33. ADMINS LIST (/admin/admins)
+    Route: /admin/admins
+    File: src/pages/admin/UsersList.jsx (role="admin")
+    
+    Features:
+    - List of all admins
+    - Admin management
+    - Role assignment
+
+
+34. CREATE ADMIN (/admin/create-admin)
+    Route: /admin/create-admin
+    File: src/pages/admin/CreateAdmin.jsx
+    
+    Features:
+    - Create new admin account
+    - Set admin permissions
+    - Assign role
+    
+    Actions:
+    - Fill admin details
+    - Set permissions
+    - Create admin account
+
+
+35. CREATE DOCTOR (/admin/create-doctor)
+    Route: /admin/create-doctor
+    File: src/pages/admin/CreateDoctor.jsx
+    
+    Features:
+    - Create new doctor account
+    - Set specialization
+    - Assign to hospital
+    
+    Actions:
+    - Fill doctor details
+    - Set specialization
+    - Assign hospital
+    - Create doctor account
+
+
+36. CREATE HELPDESK (/admin/create-helpdesk)
+    Route: /admin/create-helpdesk
+    File: src/pages/admin/CreateHelpDesk.jsx
+    
+    Features:
+    - Create helpdesk staff account
+    - Assign to hospital
+    
+    Actions:
+    - Fill helpdesk details
+    - Assign hospital
+    - Create account
+
+
+37. CREATE HOSPITAL (/admin/create-hospital)
+    Route: /admin/create-hospital
+    File: src/pages/admin/CreateHospital.jsx
+    
+    Features:
+    - Register new hospital
+    - Set hospital details
+    - Add contact information
+    
+    Actions:
+    - Fill hospital details
+    - Add location
+    - Create hospital
+
+
+38. ASSIGN DOCTOR (/admin/assign-doctor)
+    Route: /admin/assign-doctor
+    File: src/pages/admin/AssignDoctor.jsx
+    
+    Features:
+    - Assign doctors to hospitals
+    - Manage doctor assignments
+    - Reassign doctors
+    
+    Actions:
+    - Select doctor
+    - Select hospital
+    - Assign/reassign
+
+
+39. ASSIGN HELPDESK (/admin/assign-helpdesk)
+    Route: /admin/assign-helpdesk
+    File: src/pages/admin/AssignHelpDesk.jsx
+    
+    Features:
+    - Assign helpdesk to hospitals
+    - Manage assignments
+    
+    Actions:
+    - Select helpdesk staff
+    - Select hospital
+    - Assign
+
+
+40. BROADCAST (/admin/broadcast)
+    Route: /admin/broadcast
+    File: src/pages/admin/Broadcast.jsx
+    
+    Features:
+    - Send system-wide notifications
+    - Target specific user groups
+    - Message templates
+    
+    Actions:
+    - Compose message
+    - Select recipients
+    - Send broadcast
+
+
+41. AUDIT LOGS (/admin/audits)
+    Route: /admin/audits
+    File: src/pages/admin/AuditLogs.jsx
+    
+    Features:
+    - System activity logs
+    - User action tracking
+    - Security monitoring
+    
+    Actions:
+    - View logs
+    - Filter by date/user
+    - Export logs
+
+
+42. ADMIN PROFILE (/admin/profile)
+    Route: /admin/profile
+    File: src/pages/admin/AdminProfile.jsx
+    
+    Features:
+    - View admin profile
+    - Contact information
+    
+    Actions:
+    - View profile
+    - Navigate to edit
+
+
+43. UPDATE ADMIN PROFILE (/admin/profile/edit)
+    Route: /admin/profile/edit
+    File: src/pages/admin/UpdateAdminProfile.jsx
+    
+    Features:
+    - Edit admin information
+    - Update contact details
+    
+    Actions:
+    - Update profile
+    - Save changes
+
+
+HELPDESK DASHBOARD
+--------------------------------------------------------------------------------
+
+Main Layout: src/pages/helpdesk/HelpDesk.jsx
+Route: /helpdesk
+
+Sidebar Menu:
+- Dashboard
+- Manage Appointments
+- My Profile
+- Messages
+- Create Doctor
+- Leaves
+- Settings
+
+44. HELPDESK DASHBOARD (/helpdesk)
+    Route: /helpdesk (index)
+    File: src/pages/helpdesk/HelpDeskDashboard.jsx
+    
+    Features:
+    - Today's appointments overview
+    - Quick actions
+    - Statistics
+    
+    Actions:
+    - View appointments
+    - Quick patient check-in
+
+
+45. MANAGE APPOINTMENTS (/helpdesk/appointments)
+    Route: /helpdesk/appointments
+    File: src/pages/helpdesk/HelpDeskAppointments.jsx
+    
+    Features:
+    - View all appointments
+    - Schedule new appointments
+    - Manage appointment queue
+    
+    Actions:
+    - Create appointment
+    - Update appointment status
+    - Cancel appointment
+
+
+46. HELPDESK PROFILE (/helpdesk/profile)
+    Route: /helpdesk/profile
+    File: src/pages/helpdesk/HelpDeskProfile.jsx
+    
+    Features:
+    - View helpdesk profile
+    - Contact information
+    
+    Actions:
+    - View profile
+    - Navigate to edit
+
+
+47. UPDATE HELPDESK PROFILE (/helpdesk/profile/edit)
+    Route: /helpdesk/profile/edit
+    File: src/pages/helpdesk/UpdateHelpDeskProfile.jsx
+    
+    Features:
+    - Edit helpdesk information
+    - Update contact details
+    
+    Actions:
+    - Update profile
+    - Save changes
+
+
+48. MESSAGES (/helpdesk/messages)
+    Route: /helpdesk/messages
+    File: src/pages/helpdesk/DoctorMessages.jsx
+    
+    Features:
+    - Internal messaging system
+    - Communication with doctors
+    
+    Actions:
+    - Send messages
+    - View message history
+
+
+49. CREATE DOCTOR (HELPDESK) (/helpdesk/create-doctor)
+    Route: /helpdesk/create-doctor
+    File: src/pages/admin/CreateDoctor.jsx
+    
+    Features:
+    - Create doctor account (helpdesk access)
+    - Set doctor details
+    
+    Actions:
+    - Fill doctor details
+    - Create account
+
+
+50. HELPDESK LEAVES (/helpdesk/leaves)
+    Route: /helpdesk/leaves
+    File: src/pages/helpdesk/HelpDeskLeaves.jsx
+    
+    Features:
+    - View leave requests
+    - Approve/reject leaves
+    - Leave management
+    
+    Actions:
+    - View leave requests
+    - Approve leave
+    - Reject leave
+
+
+COMMON PAGES
+--------------------------------------------------------------------------------
+
+51. SETTINGS (Multiple Routes)
+    Routes: 
+    - /home/settings (Patient)
+    - /doctor/settings (Doctor)
+    - /admin/settings (Admin)
+    - /helpdesk/settings (HelpDesk)
+    
+    File: src/pages/common/Settings.jsx
+    
+    Features:
+    - Theme toggle (dark/light)
+    - Notification preferences
+    - Email update settings
+    - Account settings
+    
+    Actions:
+    - Toggle dark/light theme
+    - Enable/disable notifications
+    - Update email preferences
+
+
+COMPONENTS
+================================================================================
+
+REUSABLE COMPONENTS
+--------------------------------------------------------------------------------
+
+1. Sidebar (src/components/slidebar/Sidebar.jsx)
+   - Navigation menu
+   - User profile display
+   - Logout functionality
+   - Responsive mobile menu
+
+2. AdminNavbar (src/components/navabr/AdminNavbar.jsx)
+   - Top navigation bar
+   - Search functionality
+   - Theme toggle
+   - Notification bell
+   - User profile access
+
+3. Navbar (src/components/navabr/Navbar.jsx)
+   - Simple navigation bar
+   - Search bar
+   - Mobile menu toggle
+
+4. NotificationBell (src/components/NotificationBell.jsx)
+   - Notification icon
+   - Unread count badge
+   - Notification dropdown
+
+5. NotificationPanel (src/components/NotificationPanel.jsx)
+   - Notification list
+   - Mark as read functionality
+   - Notification filtering
+
+6. DoctorScheduleCalendar (src/components/DoctorScheduleCalendar.jsx)
+   - Weekly schedule view
+   - Appointment visualization
+   - Time slot management
+   - Weekly navigation
+
+7. HeroCard (src/components/cards/HeroCard.jsx)
+   - Landing page hero section
+   - Call-to-action buttons
+   - Feature highlights
+
+
+THEME SYSTEM
+================================================================================
+
+The application uses CSS variables for dynamic theming:
+
+Light Theme Variables:
+- --primary-color: #2563eb (blue-600)
+- --secondary-color: #64748b (slate-500)
+- --bg-color: #ffffff
+- --text-color: #0f172a (slate-900)
+- --card-bg: #f8fafc (slate-50)
+- --border-color: #e2e8f0 (slate-200)
+- --sidebar-bg: #ffffff
+- --navbar-bg: #ffffff
+
+Dark Theme Variables:
+- --primary-color: #3b82f6 (blue-500)
+- --secondary-color: #94a3b8 (slate-400)
+- --bg-color: #0f172a (slate-900)
+- --text-color: #f8fafc (slate-50)
+- --card-bg: #1e293b (slate-800)
+- --border-color: #334155 (slate-700)
+- --sidebar-bg: #0f172a (slate-900)
+- --navbar-bg: #1e293b (slate-800)
+
+Theme Toggle:
+- Available in Settings page
+- Available in navbar (some layouts)
+- Persisted in localStorage
+- Applied via data-theme attribute on document root
+
+
+AUTHENTICATION & AUTHORIZATION
+================================================================================
+
+Authentication Flow:
+1. User enters credentials on login page
+2. Backend validates credentials
+3. JWT tokens (access + refresh) are generated
+4. Tokens stored in sessionStorage
+5. User redirected based on role
+
+Authorization:
+- Private routes protected by PrivateRoutes component
+- Role-based access control (RBAC)
+- Allowed roles specified per route
+- Unauthorized access redirects to login
+
+Token Management:
+- Access token: Short-lived, used for API requests
+- Refresh token: Long-lived, used to get new access token
+- Stored in sessionStorage
+- Cleared on logout
+
+
+API INTEGRATION
+================================================================================
+
+API Services Located in: src/api/
+
+1. authservices/authservice.js
+   - Login, logout, register
+   - Password reset
+   - OTP verification
+   - Token management
+
+2. patients/patientService.js
+   - Get patient profile
+   - Update patient profile
+   - Patient-specific operations
+
+3. doctors/doctorService.js
+   - Get doctor profile
+   - Update doctor profile
+   - Doctor-specific operations
+
+4. helpdesk/helpdeskService.js
+   - Helpdesk operations
+   - Appointment management
+
+5. admin/adminService.js
+   - Admin operations
+   - User management
+   - Hospital management
+
+
+ROUTING STRUCTURE
+================================================================================
+
+Main Router: src/routes/Route.jsx
+
+Route Protection:
+- Public routes: /, /login, /register, /forgotpassword, /reset-password
+- Patient routes: /home/* (role: patient)
+- Doctor routes: /doctor/* (role: doctor)
+- Admin routes: /admin/* (role: admin, super-admin)
+- HelpDesk routes: /helpdesk/* (role: admin, helpdesk)
+
+Private Routes Component: src/routes/PrivateRoutes.jsx
+- Checks authentication status
+- Validates user role
+- Redirects unauthorized users
+
+
+FEATURES SUMMARY
+================================================================================
+
+Patient Features:
+✓ Book and manage appointments
+✓ View medical records
+✓ Access prescriptions
+✓ AI symptom checker
+✓ Billing and payments
+✓ Profile management
+
+Doctor Features:
+✓ Manage appointments
+✓ Create digital prescriptions
+✓ View patient records
+✓ Analytics dashboard
+✓ Leave management
+✓ Weekly calendar view
+✓ Quick notes system
+
+Admin Features:
+✓ User management (CRUD)
+✓ Hospital management
+✓ Doctor assignment
+✓ HelpDesk assignment
+✓ System broadcasting
+✓ Audit logs
+✓ Role-based access control
+
+HelpDesk Features:
+✓ Appointment management
+✓ Patient check-in
+✓ Leave approval
+✓ Doctor creation
+✓ Internal messaging
+
+
+RESPONSIVE DESIGN
+================================================================================
+
+Breakpoints:
+- Mobile: < 640px (sm)
+- Tablet: 640px - 1024px (md, lg)
+- Desktop: > 1024px (lg, xl)
+
+Mobile Optimizations:
+- Collapsible sidebar
+- Hamburger menu
+- Responsive grid layouts
+- Touch-friendly buttons
+- Optimized forms
+
+
+NOTIFICATIONS
+================================================================================
+
+Toast Notifications (React Hot Toast):
+- Success messages (green)
+- Error messages (red)
+- Info messages (blue)
+- Warning messages (yellow)
+
+Notification Bell:
+- Real-time notifications
+- Unread count badge
+- Notification panel
+- Mark as read functionality
+
+
+SECURITY FEATURES
+================================================================================
+
+1. Authentication
+   - JWT-based authentication
+   - Secure password hashing
+   - Token expiration
+
+2. Authorization
+   - Role-based access control
+   - Protected routes
+   - Permission validation
+
+3. Data Protection
+   - Input validation
+   - XSS prevention
+   - CSRF protection
+
+4. Session Management
+   - Automatic logout on token expiry
+   - Secure token storage
+   - Session timeout
+
+
+DEVELOPMENT NOTES
+================================================================================
+
+Code Organization:
+- Pages: src/pages/
+- Components: src/components/
+- Routes: src/routes/
+- API Services: src/api/
+- Styles: src/style/
+- Assets: src/assets/
+
+Best Practices:
+- Component-based architecture
+- Reusable components
+- Consistent naming conventions
+- CSS variables for theming
+- Responsive design patterns
+- Error handling
+- Loading states
+
+
+FUTURE ENHANCEMENTS
+================================================================================
+
+Planned Features:
+- Video consultation
+- Payment gateway integration
+- SMS notifications
+- Email notifications
+- Report generation
+- Data analytics
+- Mobile app
+- Telemedicine support
+
+
+SUPPORT & MAINTENANCE
+================================================================================
+
+For technical support or bug reports, contact the development team.
+
+System Requirements:
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- JavaScript enabled
+- Stable internet connection
+
+Browser Compatibility:
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+
+
+================================================================================
+                            END OF DOCUMENT
+================================================================================
+
+Last Updated: December 6, 2025
+Version: 1.0
