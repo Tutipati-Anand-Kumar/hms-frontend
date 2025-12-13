@@ -13,50 +13,65 @@ const API = axios.create({
 export const setAuthTokens = (userId, tokens) => {
   if (!tokens) {
     sessionStorage.removeItem(`hms_auth_tokens_${userId}`);
-    if (isDev) {
-      localStorage.removeItem(`hms_auth_tokens_${userId}`);
-    }
+    localStorage.removeItem(`hms_auth_tokens_${userId}`);
     return;
   }
 
   const tokenStr = JSON.stringify(tokens);
   sessionStorage.setItem(`hms_auth_tokens_${userId}`, tokenStr);
-  if (isDev) {
-    localStorage.setItem(`hms_auth_tokens_${userId}`, tokenStr);
-  }
-  sessionStorage.setItem("hms_current_user", userId);
+  localStorage.setItem(`hms_auth_tokens_${userId}`, tokenStr);
+
+  sessionStorage.setItem("hms_current_user", userId); // Session specific active user
+  localStorage.setItem("hms_current_user", userId);   // Persist active user
 };
 
 // Get tokens of currently active user
+// Get tokens of currently active user
 export const getAuthTokens = () => {
-  const activeUserId = sessionStorage.getItem("hms_current_user");
+  // Try SessionStorage first (current session)
+  let activeUserId = sessionStorage.getItem("hms_current_user");
+
+  // If not in session, check local storage (persistent session)
+  if (!activeUserId) {
+    activeUserId = localStorage.getItem("hms_current_user");
+    if (activeUserId) {
+      // Restore session user if found in local storage
+      sessionStorage.setItem("hms_current_user", activeUserId);
+    }
+  }
+
   if (!activeUserId) return null;
 
   // Try SessionStorage first
   const sessionTokens = sessionStorage.getItem(`hms_auth_tokens_${activeUserId}`);
   if (sessionTokens) return JSON.parse(sessionTokens);
 
-  // Fallback to LocalStorage if in Dev (and session missing - e.g. after refresh if session cleared?) 
-  // actually session survives refresh. But let's leave straightforward logic.
-  if (isDev) {
-    const localTokens = localStorage.getItem(`hms_auth_tokens_${activeUserId}`);
-    if (localTokens) return JSON.parse(localTokens);
-  }
+  // Fallback to LocalStorage
+  const localTokens = localStorage.getItem(`hms_auth_tokens_${activeUserId}`);
+  if (localTokens) return JSON.parse(localTokens);
 
   return null;
 };
 
 export const clearAuthTokens = (userId) => {
   sessionStorage.removeItem(`hms_auth_tokens_${userId}`);
-  if (isDev) {
-    localStorage.removeItem(`hms_auth_tokens_${userId}`);
-  }
+  localStorage.removeItem(`hms_auth_tokens_${userId}`);
 };
 
 export const getActiveUser = () => {
-  const userId = sessionStorage.getItem("hms_current_user");
+  let userId = sessionStorage.getItem("hms_current_user");
+  if (!userId) {
+    userId = localStorage.getItem("hms_current_user");
+  }
   if (!userId) return null;
-  return JSON.parse(sessionStorage.getItem(`hms_user_${userId}`));
+
+  const sessionUser = sessionStorage.getItem(`hms_user_${userId}`);
+  if (sessionUser) return JSON.parse(sessionUser);
+
+  const localUser = localStorage.getItem(`hms_user_${userId}`);
+  if (localUser) return JSON.parse(localUser);
+
+  return null;
 };
 
 API.interceptors.request.use((config) => {
@@ -134,9 +149,7 @@ export const registerUser = async (data) => {
 
     // Save user profile
     sessionStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
-    if (isDev) {
-      localStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
-    }
+    localStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
 
     // Save tokens for that user
     setAuthTokens(userId, res.data.tokens);
@@ -171,9 +184,7 @@ export const loginUser = async (data) => {
 
     // Save user profile
     sessionStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
-    if (isDev) {
-      localStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
-    }
+    localStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
 
     // Save tokens for that user
     setAuthTokens(userId, res.data.tokens);
@@ -262,9 +273,7 @@ export const loginHelpDesk = async (data) => {
     const userId = user.id;
 
     sessionStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
-    if (isDev) {
-      localStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
-    }
+    localStorage.setItem(`hms_user_${userId}`, JSON.stringify(user));
     setAuthTokens(userId, res.data.tokens);
   }
 
