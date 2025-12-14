@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, User, FileText, ChevronRight, X } from "lucide-react";
 import { FaBullhorn } from "react-icons/fa";
 import DoctorScheduleCalendar from "../../../components/DoctorScheduleCalendar";
+import ConfirmationModal from "../../../components/CofirmationModel";
 
 export default function NewDoctorDashboard() {
   const navigate = useNavigate();
@@ -25,6 +26,15 @@ export default function NewDoctorDashboard() {
   const [doctorProfile, setDoctorProfile] = useState(null);
   const [emergencyAlerts, setEmergencyAlerts] = useState([]);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    type: "danger",
+    onConfirm: null
+  });
 
   // Get current doctor ID from active session
   const getDoctorId = () => {
@@ -233,11 +243,21 @@ export default function NewDoctorDashboard() {
   };
 
   const confirmDelete = (note) => {
-    setNoteToDelete(note);
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Note",
+      message: "Are you sure you want to delete this note? This action cannot be undone.",
+      confirmText: "Delete Note",
+      type: "danger",
+      onConfirm: () => {
+        handleDeleteNote(note.id);
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const cancelDelete = () => {
-    setNoteToDelete(null);
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
   };
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -256,7 +276,17 @@ export default function NewDoctorDashboard() {
     }
 
     // Trigger Custom Modal
-    setShowClearConfirm(true);
+    setConfirmModal({
+      isOpen: true,
+      title: "Clear All Notes",
+      message: "Are you sure you want to delete ALL notes? This action cannot be undone.",
+      confirmText: "Yes, Delete All",
+      type: "danger",
+      onConfirm: () => {
+        confirmClearAll();
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const confirmClearAll = async () => {
@@ -407,65 +437,16 @@ export default function NewDoctorDashboard() {
   return (
     <div className="w-full h-full" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
       {/* Delete Confirmation Modal */}
-      {noteToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="rounded-lg p-6 max-w-md w-full border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-color)' }}>Delete Note</h3>
-            <p className="mb-4" style={{ color: 'var(--secondary-color)' }}>
-              Are you sure you want to delete this note? This action cannot be undone.
-            </p>
-            <div className="p-3 rounded border mb-4" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
-              <p className="text-sm" style={{ color: 'var(--text-color)' }}>{noteToDelete.text}</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--secondary-color)' }}>
-                {noteToDelete.date} at {noteToDelete.time}
-              </p>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 border rounded-md hover:opacity-80 transition-colors"
-                style={{ borderColor: 'var(--border-color)', color: 'var(--secondary-color)' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteNote(noteToDelete.id)}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-              >
-                Delete Note
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Clear All Confirmation Modal */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="rounded-lg p-6 max-w-md w-full border shadow-xl" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
-            <h3 className="text-lg font-semibold mb-2 text-center" style={{ color: 'var(--text-color)' }}>Clear All Notes</h3>
-            <p className="mb-6 text-center" style={{ color: 'var(--secondary-color)' }}>
-              Are you sure you want to delete ALL notes? <br /> This action cannot be undone.
-            </p>
-
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => setShowClearConfirm(false)}
-                className="px-6 py-2 border rounded-md hover:opacity-80 transition-colors"
-                style={{ borderColor: 'var(--border-color)', color: 'var(--secondary-color)' }}
-              >
-                No, Keep Them
-              </button>
-              <button
-                onClick={confirmClearAll}
-                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors shadow-sm"
-              >
-                Yes, Delete All
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        type={confirmModal.type}
+      />
 
       <div className="max-w-7xl mx-auto  pb-6">
         {/* Header */}

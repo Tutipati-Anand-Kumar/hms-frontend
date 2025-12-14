@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { Mail } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { forgotpasssword } from "../../api/authservices/authservice";
 import toast from "react-hot-toast";
+import { FaArrowLeft } from "react-icons/fa";
 
 const ForgotPassword = () => {
   const [form, setForm] = useState({ email: "" });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [serverMsg, setServerMsg] = useState("");
+  const navigate = useNavigate();
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -42,11 +44,16 @@ const ForgotPassword = () => {
   return (
     <div className="min-h-screen w-full  flex justify-center items-center px-4" style={{ backgroundColor: 'var(--bg-color)' }}>
 
-      <div className="w-[420px] p-8 rounded-xl shadow-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md border border-gray-100 relative">
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute top-4 left-4 text-gray-400 hover:text-gray-600 transition p-2"
+          title="Go Back"
+        >
+          <FaArrowLeft size={18} />
+        </button>
 
-        <h2 className="text-3xl font-semibold text-center mb-4" style={{ color: 'var(--text-color)' }}>
-          Forgot Password
-        </h2>
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">Forgot Password</h2>
 
         <p className="text-center text-sm mb-6" style={{ color: 'var(--secondary-color)' }}>
           Enter your email to receive a password reset link.

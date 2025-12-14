@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { LogOut, Settings, X } from "lucide-react";
 import { getInitials, getColor } from "../../utils/avatarUtils";
 import logo from "../../assets/logo.png";
-import LogoutConfirmationModal from "../modals/LogoutConfirmationModal";
+import ConfirmationModal from "../CofirmationModel";
 import { logoutUser, getActiveUser } from "../../api/authservices/authservice";
 
 const Sidebar = ({ menu, user, theme, onLogout, isOpen, onClose }) => {
@@ -42,11 +42,15 @@ const Sidebar = ({ menu, user, theme, onLogout, isOpen, onClose }) => {
 
   return (
     <>
-      <LogoutConfirmationModal
+      <ConfirmationModal
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
         onConfirm={handleLogoutConfirm}
-        theme={theme}
+        title="Logout Confirmation"
+        message="Are you sure you want to logout? You will need to login again to access your account."
+        confirmText="Logout"
+        cancelText="Cancel"
+        type="danger"
       />
 
       {/* Overlay for mobile */}

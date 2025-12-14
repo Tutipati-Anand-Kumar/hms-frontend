@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useOutletContext, Link } from "react-router-dom";
-import { listHospitals, updateHospitalStatus } from "../../api/admin/adminServices";
-import { Building2, MapPin, Activity, Eye } from "lucide-react";
+import { listHospitals, updateHospitalStatus, deleteHospital } from "../../api/admin/adminServices";
+import { Building2, MapPin, Activity, Eye, Trash2 } from "lucide-react";
+import ConfirmationModal from "../../components/CofirmationModel";
 
 const HospitalsList = () => {
     const { searchQuery, setSearchPlaceholder, setFilters, activeFilters } = useOutletContext();
     const [hospitals, setHospitals] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: "",
+        message: "",
+        confirmText: "Confirm",
+        cancelText: "Cancel",
+        type: "danger",
+        action: null
+    });
 
     useEffect(() => {
         setSearchPlaceholder("Search hospitals by name, address...");
@@ -43,15 +53,49 @@ const HospitalsList = () => {
         }
     };
 
-    const handleStatusToggle = async (id, currentStatus) => {
+    const handleStatusToggle = (id, currentStatus) => {
         const newStatus = currentStatus === "approved" ? "suspended" : "approved";
-        try {
-            await updateHospitalStatus(id, newStatus);
-            setHospitals(hospitals.map(h => h._id === id ? { ...h, status: newStatus } : h));
-        } catch (err) {
-            alert("Failed to update status");
-        }
+        const actionType = newStatus === "approved" ? "success" : "warning";
+        const actionVerb = newStatus === "approved" ? "Approve" : "Suspend";
+
+        setConfirmModal({
+            isOpen: true,
+            title: `${actionVerb} Hospital`,
+            message: `Are you sure you want to ${actionVerb.toLowerCase()} this hospital?`,
+            confirmText: actionVerb,
+            type: actionType,
+            action: async () => {
+                try {
+                    await updateHospitalStatus(id, newStatus);
+                    setHospitals(hospitals.map(h => h._id === id ? { ...h, status: newStatus } : h));
+                    closeModal();
+                } catch (err) {
+                    alert("Failed to update status");
+                }
+            }
+        });
     };
+
+    const handleDelete = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Delete Hospital",
+            message: "Are you sure you want to delete this hospital? This action cannot be undone and will remove all associated data.",
+            confirmText: "Delete",
+            type: "danger",
+            action: async () => {
+                try {
+                    await deleteHospital(id);
+                    setHospitals(hospitals.filter(h => h._id !== id));
+                    closeModal();
+                } catch (err) {
+                    alert("Failed to delete hospital");
+                }
+            }
+        });
+    };
+
+    const closeModal = () => setConfirmModal({ ...confirmModal, isOpen: false });
 
     const filteredHospitals = hospitals.filter(h => {
         const matchesSearch = h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -80,11 +124,20 @@ const HospitalsList = () => {
                                 <div className="w-12 h-12 bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-400">
                                     <Building2 size={24} />
                                 </div>
-                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${hospital.status === 'approved' ? 'bg-green-900 text-green-300' :
-                                    hospital.status === 'pending' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'
-                                    }`}>
-                                    {hospital.status}
-                                </span>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${hospital.status === 'approved' ? 'bg-green-900 text-green-300' :
+                                        hospital.status === 'pending' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'
+                                        }`}>
+                                        {hospital.status}
+                                    </span>
+                                    <button
+                                        onClick={() => handleDelete(hospital._id)}
+                                        className="text-gray-500 hover:text-red-500 transition-colors p-1"
+                                        title="Delete Hospital"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </div>
 
                             <h3 className="text-xl max-[600px]:text-lg font-bold mb-2" style={{ color: 'var(--text-color)' }}>{hospital.name}</h3>
@@ -123,6 +176,16 @@ const HospitalsList = () => {
                     </div>
                 ))}
             </div>
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeModal}
+                onConfirm={confirmModal.action}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                type={confirmModal.type}
+            />
         </div>
     );
 };

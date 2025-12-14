@@ -4,6 +4,7 @@ import { getActiveUser, API } from "../../api/authservices/authservice";
 import Chart from "react-apexcharts";
 import toast from "react-hot-toast";
 import { FaBullhorn, FaStickyNote, FaTrash, FaPlus, FaUserMd, FaHospital, FaStar, FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
+import ConfirmationModal from "../../components/CofirmationModel";
 
 const HelpDeskDashboard = () => {
     const [hospital, setHospital] = useState(null);
@@ -449,6 +450,15 @@ const EmergencyButton = ({ hospitalId }) => {
 const NotesSection = ({ userId }) => {
     const [notes, setNotes] = useState([]);
     const [newNote, setNewNote] = useState("");
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: "",
+        message: "",
+        confirmText: "Delete",
+        cancelText: "Cancel",
+        type: "danger",
+        action: null
+    });
 
     const fetchNotes = async () => {
         if (!userId) return;
@@ -476,30 +486,49 @@ const NotesSection = ({ userId }) => {
         }
     };
 
-    const handleDeleteNote = async (id) => {
-        try {
-            await API.delete(`/notes/${id}`);
-            setNotes(notes.filter(n => n._id !== id));
-            toast.success("Note deleted");
-        } catch (err) {
-            toast.error("Failed to delete note");
-        }
+    const handleDeleteNote = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Delete Note",
+            message: "Are you sure you want to delete this note?",
+            confirmText: "Delete",
+            type: "danger",
+            action: async () => {
+                try {
+                    await API.delete(`/notes/${id}`);
+                    setNotes(notes.filter(n => n._id !== id));
+                    toast.success("Note deleted");
+                    closeModal();
+                } catch (err) {
+                    toast.error("Failed to delete note");
+                }
+            }
+        });
     };
 
-    const handleClearAll = async () => {
-        if (window.confirm("Delete all notes? This action cannot be undone.")) {
-            try {
-                // Assuming a bulk delete endpoint or iterating for now
-                // For a real application, a dedicated bulk delete endpoint would be better
-                await Promise.all(notes.map(note => API.delete(`/notes/${note._id}`)));
-                setNotes([]);
-                toast.success("All notes cleared");
-            } catch (err) {
-                console.error("Error clearing all notes:", err);
-                toast.error("Failed to clear all notes");
+    const handleClearAll = () => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Delete All Notes",
+            message: "Are you sure you want to delete all notes? This action cannot be undone.",
+            confirmText: "Delete All",
+            type: "danger",
+            action: async () => {
+                try {
+                    // Assuming a bulk delete endpoint or iterating for now
+                    await Promise.all(notes.map(note => API.delete(`/notes/${note._id}`)));
+                    setNotes([]);
+                    toast.success("All notes cleared");
+                    closeModal();
+                } catch (err) {
+                    console.error("Error clearing all notes:", err);
+                    toast.error("Failed to clear all notes");
+                }
             }
-        }
-    }
+        });
+    };
+
+    const closeModal = () => setConfirmModal({ ...confirmModal, isOpen: false });
 
     return (
         <div className="rounded-lg shadow-lg border flex flex-col h-full max-h-[400px]" style={{ backgroundColor: "var(--card-bg)", borderColor: "var(--border-color)" }}>
@@ -564,6 +593,17 @@ const NotesSection = ({ userId }) => {
                     <button onClick={handleClearAll} className="text-xs text-red-500 hover:underline">Clear All Notes</button>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeModal}
+                onConfirm={confirmModal.action}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                type={confirmModal.type}
+            />
         </div>
     );
 };

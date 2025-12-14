@@ -64,4 +64,13 @@ export const createDoctorByHelpdesk = async (data) => {
 
 export const getHelpDeskMe = me;
 
-export default { login, refresh, logout, me, updateMe, getDashboard, createDoctorByHelpdesk, getHelpDeskMe };
+export const getHelpDeskDoctors = async () => {
+  try {
+    const res = await API.get("/helpdesk/doctors");
+    return res.data;
+  } catch (err) {
+    throw err.response?.data || { message: "Server Error" };
+  }
+};
+
+export default { login, refresh, logout, me, updateMe, getDashboard, createDoctorByHelpdesk, getHelpDeskMe, getHelpDeskDoctors };

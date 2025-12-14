@@ -7,6 +7,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { API, getActiveUser } from "../../../api/authservices/authservice";
+import ConfirmationModal from "../../../components/CofirmationModel";
 
 const MedicalRecords = () => {
   const [reports, setReports] = useState({});
@@ -16,6 +17,15 @@ const MedicalRecords = () => {
   const [patientId, setPatientId] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null); // Store PDF blob URL
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    type: "danger",
+    onConfirm: null
+  });
 
   // Get current patient ID
   useEffect(() => {
@@ -149,7 +159,7 @@ const MedicalRecords = () => {
       } catch (error) {
         console.error("❌ Failed to fetch PDF proxy, falling back to direct URL:", error);
         // Fallback: Try to load the original URL directly (ignores backend 401/500)
-        setPdfBlobUrl(report.data); 
+        setPdfBlobUrl(report.data);
       }
     }
   };
@@ -164,31 +174,39 @@ const MedicalRecords = () => {
   };
 
   // Delete report
-  const deleteReport = async (date, reportId) => {
-    if (window.confirm("Are you sure you want to delete this report?")) {
-      try {
-        await API.delete(`/reports/${reportId}`);
+  const deleteReport = (date, reportId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Report",
+      message: "Are you sure you want to delete this report? This action cannot be undone.",
+      confirmText: "Delete",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          await API.delete(`/reports/${reportId}`);
 
-        setReports((prev) => {
-          const updatedDateReports = prev[date].filter(
-            (report) => report.id !== reportId
-          );
+          setReports((prev) => {
+            const updatedDateReports = prev[date].filter(
+              (report) => report.id !== reportId
+            );
 
-          if (updatedDateReports.length === 0) {
-            const { [date]: removed, ...rest } = prev;
-            return rest;
-          }
+            if (updatedDateReports.length === 0) {
+              const { [date]: removed, ...rest } = prev;
+              return rest;
+            }
 
-          return {
-            ...prev,
-            [date]: updatedDateReports,
-          };
-        });
-      } catch (err) {
-        console.error("Error deleting report:", err);
-        alert("Failed to delete report");
+            return {
+              ...prev,
+              [date]: updatedDateReports,
+            };
+          });
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          console.error("Error deleting report:", err);
+          alert("Failed to delete report");
+        }
       }
-    }
+    });
   };
 
   // Download report
@@ -214,6 +232,16 @@ const MedicalRecords = () => {
 
   return (
     <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-color)] max-w-7xl mx-auto">
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        type={confirmModal.type}
+      />
       <h1 className="text-2xl max-sm:text-[18px] font-bold mb-2">Medical Records</h1>
       <p className="text-[var(--secondary-color)] mb-6">Patient ID: {patientId}</p>
 

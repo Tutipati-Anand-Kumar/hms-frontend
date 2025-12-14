@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { API } from "../../../api/authservices/authservice";
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { FileText, ChevronRight, CheckSquare, Square, Trash2, X } from 'lucide-react';
+import ConfirmationModal from "../../../components/CofirmationModel";
 
 const Prescriptions = () => {
   const [prescriptions, setPrescriptions] = useState([]);
@@ -11,12 +12,15 @@ const Prescriptions = () => {
   // Selection State
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // Custom Confirmation State
-  const [confirmState, setConfirmState] = useState({
-    show: false,
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
     message: "",
-    isBatch: false,
-    targetId: null
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    type: "danger",
+    action: null
   });
 
   const navigate = useNavigate();
@@ -67,48 +71,54 @@ const Prescriptions = () => {
   // --- Delete Logic ---
   const initiateDelete = (id, e) => {
     e.stopPropagation();
-    setConfirmState({
-      show: true,
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Prescription",
       message: "Are you sure you want to delete this prescription?",
-      isBatch: false,
-      targetId: id
+      confirmText: "Delete Forever",
+      cancelText: "Cancel",
+      type: "danger",
+      action: () => confirmDeleteSingle(id)
     });
   };
 
   const initiateBatchDelete = () => {
     if (selectedIds.length === 0) return;
-    setConfirmState({
-      show: true,
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Prescriptions",
       message: `Are you sure you want to delete ${selectedIds.length} selected prescription(s)?`,
-      isBatch: true,
-      targetId: null
+      confirmText: `Delete ${selectedIds.length} Items`,
+      cancelText: "Cancel",
+      type: "danger",
+      action: () => confirmDeleteBatch()
     });
   };
 
-  const confirmDelete = async () => {
-    const { isBatch, targetId } = confirmState;
-    // Optimistic UI update or wait for API? Let's wait for API to be safe but show loading if needed.
-    // For now, just close dialog and process.
-    setConfirmState({ ...confirmState, show: false });
-
+  const confirmDeleteSingle = async (targetId) => {
     try {
-      if (isBatch) {
-        await API.post("/prescriptions/delete-batch", { ids: selectedIds });
-        setPrescriptions(prev => prev.filter(p => !selectedIds.includes(p._id)));
-        setSelectedIds([]);
-      } else if (targetId) {
-        await API.delete(`/prescriptions/${targetId}`);
-        setPrescriptions(prev => prev.filter(p => p._id !== targetId));
-      }
+      await API.delete(`/prescriptions/${targetId}`);
+      setPrescriptions(prev => prev.filter(p => p._id !== targetId));
+      closeModal();
     } catch (err) {
       console.error("Delete error:", err);
       alert("Failed to delete. Please try again.");
     }
   };
 
-  const cancelDelete = () => {
-    setConfirmState({ ...confirmState, show: false });
+  const confirmDeleteBatch = async () => {
+    try {
+      await API.post("/prescriptions/delete-batch", { ids: selectedIds });
+      setPrescriptions(prev => prev.filter(p => !selectedIds.includes(p._id)));
+      setSelectedIds([]);
+      closeModal();
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete. Please try again.");
+    }
   };
+
+  const closeModal = () => setConfirmModal({ ...confirmModal, isOpen: false });
 
   if (loading) return (
     <div className="min-h-screen bg-[var(--bg-color)] flex items-center justify-center">
@@ -124,39 +134,16 @@ const Prescriptions = () => {
   return (
     <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-color)] md:p-8 w-full overflow-y-auto custom-scrollbar relative">
 
-      {/* --- Custom Confirmation Dialog (Top Center) --- */}
-      {confirmState.show && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-down w-[90%] max-w-md">
-          <div className="bg-[var(--card-bg)] border border-[var(--border-color)] shadow-2xl rounded-xl p-4 flex flex-col gap-4">
-            <div className="flex items-start gap-3">
-              <div className="bg-red-500/10 p-2 rounded-full text-red-500 shrink-0">
-                <Trash2 size={24} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-[var(--text-color)]">Confirm Deletion</h3>
-                <p className="text-[var(--secondary-color)] text-sm mt-1">{confirmState.message}</p>
-              </div>
-              <button onClick={cancelDelete} className="text-[var(--secondary-color)] hover:text-[var(--text-color)]">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="flex justify-end gap-3 mt-2">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 text-sm font-medium text-[var(--secondary-color)] hover:bg-[var(--bg-color)] rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors shadow-lg shadow-red-500/20"
-              >
-                Delete Forever
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeModal}
+        onConfirm={confirmModal.action}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        type={confirmModal.type}
+      />
 
       <div className="max-w-7xl mx-auto">
         {/* Header with Actions */}

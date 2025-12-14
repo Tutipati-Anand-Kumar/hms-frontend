@@ -1,4 +1,4 @@
-import { API } from "../authservices/authservice";
+import { API, getActiveUser } from "../authservices/authservice";
 
 
 
@@ -57,11 +57,56 @@ export const getAppointmentsByDate = async (date) => {
   }
 };
 
+// Notes Services
+export const getQuickNotes = async () => {
+  try {
+    const user = getActiveUser();
+    if (!user || (!user.id && !user._id)) return [];
+
+    // Backend expects an ID in the URL. For now, use the logged-in user's ID.
+    // Note: The backend route is /:doctorId, so we pass the user ID.
+    const id = user.id || user._id;
+    const res = await API.get(`/notes/${id}`);
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching notes", err);
+    return [];
+  }
+};
+
+export const createQuickNote = async (text) => {
+  try {
+    const user = getActiveUser();
+    if (!user || (!user.id && !user._id)) throw new Error("User not found");
+
+    const id = user.id || user._id;
+    const res = await API.post("/notes", {
+      doctorId: id,
+      text: text
+    });
+    return res.data;
+  } catch (err) {
+    throw err.response?.data || { message: "Failed to create note" };
+  }
+};
+
+export const deleteQuickNote = async (id) => {
+  try {
+    const res = await API.delete(`/notes/${id}`);
+    return res.data;
+  } catch (err) {
+    throw err.response?.data || { message: "Failed to delete note" };
+  }
+};
+
 export default {
   searchDoctors,
   getDoctorById,
   getMyProfile,
   updateMyProfile,
   getCalendarStats,
-  getAppointmentsByDate
+  getAppointmentsByDate,
+  getQuickNotes,
+  createQuickNote,
+  deleteQuickNote
 };

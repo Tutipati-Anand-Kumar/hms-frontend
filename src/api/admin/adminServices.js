@@ -131,6 +131,15 @@ export const updateHospitalStatus = async (id, status) => {
   }
 };
 
+export const deleteHospital = async (id) => {
+  try {
+    const res = await API.delete(`/hospitals/${id}`);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Server Error" };
+  }
+};
+
 export const getHospitalWithDoctors = async (id) => {
   try {
     const res = await API.get(`/admin/hospitals/${id}/details`);

@@ -148,19 +148,19 @@ const AdminNavbar = ({
             {/* Mobile Search & Filter (Visible below main navbar on small/tablet screens) */}
             <div className="px-4 pb-3 flex flex-row items-center gap-2 lg:hidden">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 max-[650px]:left-1.5 max-[650px]:text-xs" size={14} />
                     <input
                         type="text"
                         placeholder={searchPlaceholder}
                         onChange={(e) => onSearch && onSearch(e.target.value)}
-                        className="w-full bg-[var(--card-bg)] text-[var(--text-color)] pl-9 pr-3 py-1.5 rounded-lg border border-[var(--border-color)] focus:border-blue-500 outline-none text-sm h-9"
+                        className="w-full bg-[var(--card-bg)] text-[var(--text-color)] pl-9 pr-3 py-1.5 rounded-lg border border-[var(--border-color)] focus:border-blue-500 outline-none text-sm h-9 max-[650px]:h-7 max-[650px]:py-1 max-[650px]:px-2 max-[650px]:pl-6 max-[650px]:rounded-md max-[650px]:text-xs"
                     />
                 </div>
                 {filters.map((filter) => (
                     <select
                         key={filter.key}
                         onChange={(e) => onFilterChange && onFilterChange(filter.key, e.target.value)}
-                        className="bg-[var(--card-bg)] text-[var(--text-color)] text-sm px-2 py-1.5 rounded-lg border border-[var(--border-color)] focus:border-purple-500 outline-none h-9"
+                        className="bg-[var(--card-bg)] text-[var(--text-color)] text-sm py-1.5 rounded-lg border border-[var(--border-color)] focus:border-purple-500 outline-none h-9 max-[650px]:h-7 max-[650px]:py-1 max-[650px]:rounded-md max-[650px]:text-xs max-[650px]:w-25"
                     >
                         <option value="">{filter.label}</option>
                         {filter.options.map((opt) => (

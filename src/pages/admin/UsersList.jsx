@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { getAllUsers, deleteUser, updateUser } from "../../api/admin/adminServices";
 import { Trash2, User, Search, X, Calendar, MapPin, Activity, Pill, AlertCircle, Building2 } from "lucide-react";
 import toast from "react-hot-toast";
+import ConfirmationModal from "../../components/CofirmationModel";
 
 const getInitials = (name) => {
     if (!name) return "";
@@ -33,6 +34,15 @@ const UsersList = ({ role }) => {
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: "",
+        message: "",
+        confirmText: "Delete",
+        cancelText: "Cancel",
+        type: "danger",
+        onConfirm: null
+    });
 
     // Debug log
     console.log("UsersList - Received Search Query:", searchQuery);
@@ -65,16 +75,25 @@ const UsersList = ({ role }) => {
         }
     };
 
-    const handleDelete = async (e, id) => {
+    const handleDelete = (e, id) => {
         e.stopPropagation();
-        if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
-        try {
-            await deleteUser(id);
-            setUsers(users.filter((u) => u._id !== id));
-            toast.success("User deleted successfully");
-        } catch (err) {
-            toast.error("Failed to delete user");
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "Delete User",
+            message: "Are you sure you want to delete this user? This action cannot be undone.",
+            confirmText: "Delete",
+            type: "danger",
+            onConfirm: async () => {
+                try {
+                    await deleteUser(id);
+                    setUsers(users.filter((u) => u._id !== id));
+                    toast.success("User deleted successfully");
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                } catch (err) {
+                    toast.error("Failed to delete user");
+                }
+            }
+        });
     };
 
     const handleEditClick = (e, user) => {
@@ -135,6 +154,16 @@ const UsersList = ({ role }) => {
 
     return (
         <div>
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                type={confirmModal.type}
+            />
             <h1 className="text-2xl max-[600px]:text-lg font-bold mb-6 capitalize" style={{ color: 'var(--text-color)' }}>
                 {role ? `${role}s List` : "All Users"}
             </h1>

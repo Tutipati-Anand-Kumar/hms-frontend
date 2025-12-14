@@ -4,6 +4,7 @@ import { FaPlay, FaTimes, FaBan } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import io from "socket.io-client";
+import ConfirmationModal from "../../../components/CofirmationModel";
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState([]);
@@ -22,6 +23,17 @@ export default function AppointmentsPage() {
   }, []);
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    type: "danger",
+    action: null
+  });
 
   const fetchAppointments = async () => {
     try {
@@ -61,23 +73,23 @@ export default function AppointmentsPage() {
     navigate("/doctor/prescription", { state: { appointment } });
   };
 
-  // ... inside component ...
-  const [cancelModalApptId, setCancelModalApptId] = useState(null);
-
-  // ... existing functions ...
-
   const handleCancelAppointment = (id) => {
-    // Open modal
-    setCancelModalApptId(id);
+    setConfirmModal({
+      isOpen: true,
+      title: "Confirm Cancellation",
+      message: "Are you sure you want to cancel this appointment? A notification will be sent to the patient.",
+      confirmText: "Yes, Cancel",
+      cancelText: "No, Keep",
+      type: "danger",
+      action: () => proceedCancel(id)
+    });
   };
 
-  const proceedCancel = async () => {
-    if (!cancelModalApptId) return;
-
+  const proceedCancel = async (id) => {
     try {
       const reason = "The doctor cancelled your appointment due to some emergency issues and other etc problems. Please choose another schedule for this appointment.";
 
-      await API.patch(`/bookings/${cancelModalApptId}/status`, {
+      await API.put(`/bookings/status/${id}`, {
         status: "cancelled",
         reason: reason
       });
@@ -86,16 +98,17 @@ export default function AppointmentsPage() {
       fetchAppointments();
 
       if (socket) {
-        socket.emit("doctor_cancelled_appointment", { appointmentId: cancelModalApptId });
+        socket.emit("doctor_cancelled_appointment", { appointmentId: id });
       }
+      closeModal();
 
     } catch (err) {
       console.error("Cancel Error:", err);
       toast.error("Failed to cancel appointment");
-    } finally {
-      setCancelModalApptId(null);
     }
   };
+
+  const closeModal = () => setConfirmModal({ ...confirmModal, isOpen: false });
 
   return (
     <div className="h-full" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
@@ -173,36 +186,16 @@ export default function AppointmentsPage() {
         </div>
       )}
 
-      {/* Cancellation Modal */}
-      {cancelModalApptId && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm">
-          <div
-            className="p-6 rounded-xl shadow-2xl w-full max-w-md transform transition-all scale-100"
-            style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}
-          >
-            <h3 className="text-xl font-bold mb-4 text-center" style={{ color: 'var(--text-color)' }}>Confirm Cancellation</h3>
-            <p className="mb-6 text-center" style={{ color: 'var(--secondary-color)' }}>
-              Are you sure you want to cancel this appointment?
-              <br />
-              <span className="text-xs opacity-70">(A notification will be sent to the patient)</span>
-            </p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={proceedCancel}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Yes, Cancel
-              </button>
-              <button
-                onClick={() => setCancelModalApptId(null)}
-                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-              >
-                No, Keep
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeModal}
+        onConfirm={confirmModal.action}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        type={confirmModal.type}
+      />
     </div>
   );
 }

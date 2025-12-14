@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Calendar, CheckCircle, XCircle, Clock, Check, X } from "lucide-react";
+import ConfirmationModal from "../../components/CofirmationModel";
 import { API } from "../../api/authservices/authservice";
 
 const HelpDeskLeaves = () => {
     const [leaves, setLeaves] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: "",
+        message: "",
+        confirmText: "Confirm",
+        cancelText: "Cancel",
+        type: "info",
+        action: null
+    });
 
     const fetchLeaves = async () => {
         try {
@@ -28,11 +39,28 @@ const HelpDeskLeaves = () => {
             await API.patch(`/leaves/${id}/status`, { status });
             toast.success(`Leave request ${status}`);
             fetchLeaves();
+            closeModal();
         } catch (error) {
             console.error("Error updating leave status:", error);
             toast.error("Failed to update status");
         }
     };
+
+    // Wrapper to open confirmation modal
+    const initiateStatusUpdate = (id, status) => {
+        const isApprove = status === 'approved';
+        setConfirmModal({
+            isOpen: true,
+            title: isApprove ? "Approve Leave Request" : "Reject Leave Request",
+            message: `Are you sure you want to ${status} this leave request?`,
+            confirmText: isApprove ? "Yes, Approve" : "Yes, Reject",
+            cancelText: "Cancel",
+            type: isApprove ? "info" : "danger", // 'info' (blue) for approve, 'danger' (red) for reject
+            action: () => handleStatusUpdate(id, status)
+        });
+    };
+
+    const closeModal = () => setConfirmModal({ ...confirmModal, isOpen: false });
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -93,14 +121,14 @@ const HelpDeskLeaves = () => {
                                             {leave.status === "pending" && (
                                                 <div className="flex gap-2">
                                                     <button
-                                                        onClick={() => handleStatusUpdate(leave._id, "approved")}
+                                                        onClick={() => initiateStatusUpdate(leave._id, "approved")}
                                                         className="p-2 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors border border-green-300 dark:border-green-700 hover:border-green-500"
                                                         title="Approve"
                                                     >
                                                         <Check className="w-4 h-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleStatusUpdate(leave._id, "rejected")}
+                                                        onClick={() => initiateStatusUpdate(leave._id, "rejected")}
                                                         className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-300 dark:border-red-700 hover:border-red-500"
                                                         title="Reject"
                                                     >
@@ -116,6 +144,17 @@ const HelpDeskLeaves = () => {
                     </div>
                 )}
             </div>
+
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeModal}
+                onConfirm={confirmModal.action}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                type={confirmModal.type}
+            />
         </div>
     );
 };
