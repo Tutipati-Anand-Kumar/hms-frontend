@@ -140,6 +140,11 @@ API.interceptors.response.use(
   }
 );
 
+export const checkUserExistence = async (data) => {
+  const res = await API.post("/auth/check-user", data);
+  return res.data;
+};
+
 export const registerUser = async (data) => {
   const res = await API.post("/auth/register", data);
 

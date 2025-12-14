@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useParams, useOutletContext } from "react-router-dom";
 import { getHospitalWithDoctors, removeDoctorFromHospital } from "../../api/admin/adminServices";
 import { Building2, MapPin, Phone, Mail, UserMinus } from "lucide-react";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const HospitalDetails = () => {
     const { id } = useParams();
     const { setSearchPlaceholder, setFilters } = useOutletContext();
     const [hospital, setHospital] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [confirmModal, setConfirmModal] = useState({ show: false, doctorId: null });
 
     useEffect(() => {
         setSearchPlaceholder("Search doctors in this hospital...");
@@ -26,14 +28,20 @@ const HospitalDetails = () => {
         }
     };
 
-    const handleRemoveDoctor = async (doctorProfileId) => {
-        if (!window.confirm("Remove this doctor from the hospital?")) return;
+    const initiateRemove = (doctorProfileId) => {
+        setConfirmModal({ show: true, doctorId: doctorProfileId });
+    };
+
+    const confirmRemove = async () => {
+        if (!confirmModal.doctorId) return;
         try {
-            await removeDoctorFromHospital(id, doctorProfileId);
+            await removeDoctorFromHospital(id, confirmModal.doctorId);
             // Refresh list
             fetchDetails();
         } catch (err) {
             alert("Failed to remove doctor");
+        } finally {
+            setConfirmModal({ show: false, doctorId: null });
         }
     };
 
@@ -79,7 +87,7 @@ const HospitalDetails = () => {
                                 </div>
                             </div>
                             <button
-                                onClick={() => handleRemoveDoctor(item.doctor._id)}
+                                onClick={() => initiateRemove(item.doctor._id)}
                                 className="text-red-400 hover:bg-red-900/20 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                                 title="Remove Doctor"
                             >
@@ -91,6 +99,16 @@ const HospitalDetails = () => {
                     <p className="col-span-2" style={{ color: 'var(--secondary-color)' }}>No doctors assigned to this hospital yet.</p>
                 )}
             </div>
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={confirmModal.show}
+                onClose={() => setConfirmModal({ show: false, doctorId: null })}
+                onConfirm={confirmRemove}
+                title="Remove Doctor"
+                message="Are you sure you want to remove this doctor from the hospital?"
+                type="danger"
+                confirmText="Remove"
+            />
         </div>
     );
 };

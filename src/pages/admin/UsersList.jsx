@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { getAllUsers, deleteUser, updateUser } from "../../api/admin/adminServices";
 import { Trash2, User, Search, X, Calendar, MapPin, Activity, Pill, AlertCircle, Building2 } from "lucide-react";
+import ConfirmationModal from "../../components/ConfirmationModal";
 import toast from "react-hot-toast";
 
 const getInitials = (name) => {
@@ -65,15 +66,23 @@ const UsersList = ({ role }) => {
         }
     };
 
-    const handleDelete = async (e, id) => {
+    const [deleteModal, setDeleteModal] = useState({ show: false, id: null });
+
+    const initiateDelete = (e, id) => {
         e.stopPropagation();
-        if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
+        setDeleteModal({ show: true, id });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteModal.id) return;
         try {
-            await deleteUser(id);
-            setUsers(users.filter((u) => u._id !== id));
+            await deleteUser(deleteModal.id);
+            setUsers(users.filter((u) => u._id !== deleteModal.id));
             toast.success("User deleted successfully");
         } catch (err) {
             toast.error("Failed to delete user");
+        } finally {
+            setDeleteModal({ show: false, id: null });
         }
     };
 
@@ -204,7 +213,7 @@ const UsersList = ({ role }) => {
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                                             </button>
                                             <button
-                                                onClick={(e) => handleDelete(e, user._id)}
+                                                onClick={(e) => initiateDelete(e, user._id)}
                                                 className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/20 rounded-lg transition-colors"
                                                 title="Delete User"
                                             >
@@ -278,6 +287,16 @@ const UsersList = ({ role }) => {
                 </div>
             )}
 
+            {/* Confirmation Modal for Delete */}
+            <ConfirmationModal
+                isOpen={deleteModal.show}
+                onClose={() => setDeleteModal({ show: false, id: null })}
+                onConfirm={confirmDelete}
+                title="Delete User"
+                message="Are you sure you want to delete this user? This action cannot be undone."
+                type="danger"
+                confirmText="Delete"
+            />
             {/* User Details Modal - Unified Premium Design */}
             {selectedUser && (
                 <div

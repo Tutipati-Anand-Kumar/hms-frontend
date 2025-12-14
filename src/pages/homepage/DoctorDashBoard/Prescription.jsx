@@ -6,6 +6,7 @@ import { API } from "../../../api/authservices/authservice";
 import toast from "react-hot-toast";
 import { X, Activity } from "lucide-react";
 import { getPrescriptionTemplate } from "./MedicalRecords";
+import ConfirmationModal from "../../../components/ConfirmationModal";
 
 export default function Prescription() {
     const location = useLocation();
@@ -71,6 +72,7 @@ export default function Prescription() {
         isGenerated: false // Track if generated/editable per mode
     };
     const [showVitals, setShowVitals] = useState(false);
+    const [showClearModal, setShowClearModal] = useState(false);
 
     // --- STATE MANAGEMENT ---
 
@@ -146,7 +148,15 @@ export default function Prescription() {
                 setPatientName(p.name);
 
                 // RESET currentData vitals to avoid carrying over previous patient's data
-                updateCurrentData({ weight: '', height: '' });
+                // ALSO Auto-populate symptoms from latest appointment
+                const appointmentReason = apptData?.reason || "";
+
+                updateCurrentData({
+                    weight: '',
+                    height: '',
+                    symptoms: appointmentReason,
+                    reason: appointmentReason // Auto-fill diagnosis/reason as requested by user
+                });
 
                 // Fetch full profile for height/weight
                 const fetchDetails = async () => {
@@ -478,7 +488,7 @@ export default function Prescription() {
                     </div>
                 </div>
 
-                <h1 className="text-3xl font-bold text-center text-blue-500 mb-8">
+                <h1 className="text-3xl font-bold text-center text-blue-500 mb-8 max-[625px]:text-xl">
                     {prescriptionMode === 'ai' ? "AI Prescription Generator" : "Self Prescription"}
                 </h1>
 
@@ -901,13 +911,26 @@ export default function Prescription() {
                         {uploadingPDF ? 'Generating...' : 'Save & Download'}
                     </button>
                     <button
-                        onClick={handleClear}
+                        onClick={() => setShowClearModal(true)}
                         className="w-full sm:w-auto px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base rounded-lg font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all"
                     >
                         Clear All
                     </button>
                 </div>
             </div >
+
+            <ConfirmationModal
+                isOpen={showClearModal}
+                onClose={() => setShowClearModal(false)}
+                onConfirm={() => {
+                    handleClear();
+                    setShowClearModal(false);
+                }}
+                title="Clear Prescription Form"
+                message="Are you sure you want to clear the entire form? All entered data including medicines and reason will be lost."
+                confirmText="Yes, Clear All"
+                type="danger"
+            />
         </div >
 
     );

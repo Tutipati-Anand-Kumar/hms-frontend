@@ -11,11 +11,11 @@ import {
   Loader2
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { registerUser, sendOtp } from "../../api/authservices/authservice";
+import { registerUser, sendOtp, checkUserExistence } from "../../api/authservices/authservice";
 import toast from "react-hot-toast";
 
 const RegisterPage = () => {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   const location = useLocation();
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -62,7 +62,35 @@ const RegisterPage = () => {
       newErrors.password = "Password must start with uppercase & be 6+ chars.";
     if (otpSent && !form.otp) newErrors.otp = "OTP is required";
     setErrors(newErrors);
+    setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // CHECK EXISTENCE
+  const handleBlur = async (field, value) => {
+    if (!value) return;
+
+    // Only check if format is valid first
+    if (field === 'email' && !emailRegex.test(value)) return;
+    if (field === 'mobile' && !mobileRegex.test(value)) return;
+
+    try {
+      const res = await checkUserExistence({ [field]: value });
+      if (res.exists) {
+        setErrors((prev) => ({ ...prev, [field]: res.message }));
+      } else {
+        // Clear error if it was "already registered"
+        setErrors((prev) => {
+          const newErrs = { ...prev };
+          if (newErrs[field] && newErrs[field].includes("already registered")) {
+            delete newErrs[field];
+          }
+          return newErrs;
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // SEND OTP
@@ -80,6 +108,34 @@ const RegisterPage = () => {
     setServerMsg("");
 
     try {
+      // Direct Existence Check (blocks if already registered)
+      const existenceRes = await checkUserExistence({ email: form.email, mobile: form.mobile });
+
+      if (existenceRes.exists) {
+        // Find which field is duplicated based on the message or check both individually if API returns it
+        // Since API returns a generic "exists" and message, we'll try to determine or set error for both if ambiguous
+        // However, looking at handleBlur logic, existenceRes.message usually says which one.
+        // But to be safe and specific, we can set it on the relevant field if the message maps, 
+        // OR just set checking the message string. 
+        // For now, let's map the error to the email field if it contains "email" or generic, and mobile if "mobile".
+
+        let newErrors = {};
+        if (existenceRes.message.toLowerCase().includes("email")) {
+          newErrors.email = existenceRes.message;
+        }
+        if (existenceRes.message.toLowerCase().includes("mobile") || existenceRes.message.toLowerCase().includes("phone")) {
+          newErrors.mobile = existenceRes.message;
+        }
+        // If message is generic "User already exists", set on email for visibility
+        if (!newErrors.email && !newErrors.mobile) {
+          newErrors.email = existenceRes.message;
+        }
+
+        setErrors((prev) => ({ ...prev, ...newErrors }));
+        return; // BLOCK OTP SENDING
+      }
+
+      // Proceed if user does not exist
       await sendOtp({ email: form.email, mobile: form.mobile });
       toast.success("OTP sent", { duration: 1500 });
 
@@ -111,8 +167,8 @@ const RegisterPage = () => {
     try {
       await registerUser(form);
       toast.success("Registration Successful", { duration: 2000 });
-      
-     
+
+
       setTimeout(() => navigate("/login"));
     } catch (err) {
       const msg = err.response?.data?.message || "Registration Failed";
@@ -211,6 +267,7 @@ const RegisterPage = () => {
                     value={form.mobile}
                     placeholder="Enter mobile number"
                     onChange={handleMobileChange}
+                    onBlur={(e) => handleBlur('mobile', form.mobile)}
                     className="bg-transparent outline-none ml-3 w-full placeholder-gray-500"
                     style={{ color: 'var(--text-color)' }}
                   />
@@ -236,6 +293,7 @@ const RegisterPage = () => {
                       onChange={(e) =>
                         setForm({ ...form, email: e.target.value })
                       }
+                      onBlur={(e) => handleBlur('email', e.target.value)}
                       className="bg-transparent outline-none w-full placeholder-gray-500"
                       style={{ color: 'var(--text-color)' }}
                     />
