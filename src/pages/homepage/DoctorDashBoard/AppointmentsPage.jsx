@@ -4,6 +4,7 @@ import { FaPlay, FaTimes, FaBan } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import io from "socket.io-client";
+import ConfirmationModal from "../../../components/ConfirmationModal";
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState([]);
@@ -174,35 +175,21 @@ export default function AppointmentsPage() {
       )}
 
       {/* Cancellation Modal */}
-      {cancelModalApptId && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm">
-          <div
-            className="p-6 rounded-xl shadow-2xl w-full max-w-md transform transition-all scale-100"
-            style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}
-          >
-            <h3 className="text-xl font-bold mb-4 text-center" style={{ color: 'var(--text-color)' }}>Confirm Cancellation</h3>
-            <p className="mb-6 text-center" style={{ color: 'var(--secondary-color)' }}>
-              Are you sure you want to cancel this appointment?
-              <br />
-              <span className="text-xs opacity-70">(A notification will be sent to the patient)</span>
-            </p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={proceedCancel}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Yes, Cancel
-              </button>
-              <button
-                onClick={() => setCancelModalApptId(null)}
-                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-              >
-                No, Keep
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={!!cancelModalApptId}
+        onClose={() => setCancelModalApptId(null)}
+        onConfirm={proceedCancel}
+        title="Confirm Cancellation"
+        message={
+          <>
+            Are you sure you want to cancel this appointment?<br />
+            <span className="text-xs opacity-70">(A notification will be sent to the patient)</span>
+          </>
+        }
+        type="danger"
+        confirmText="Yes, Cancel"
+        cancelText="No, Keep"
+      />
     </div>
   );
 }

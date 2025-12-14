@@ -7,15 +7,16 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { API, getActiveUser } from "../../../api/authservices/authservice";
+import ConfirmationModal from "../../../components/ConfirmationModal";
 
 const MedicalRecords = () => {
   const [reports, setReports] = useState({});
-  // FIX: Default to today's date so uploads have a destination
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [patientId, setPatientId] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState(null); // Store PDF blob URL
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ show: false, date: null, id: null });
 
   // Get current patient ID
   useEffect(() => {
@@ -149,7 +150,7 @@ const MedicalRecords = () => {
       } catch (error) {
         console.error("❌ Failed to fetch PDF proxy, falling back to direct URL:", error);
         // Fallback: Try to load the original URL directly (ignores backend 401/500)
-        setPdfBlobUrl(report.data); 
+        setPdfBlobUrl(report.data);
       }
     }
   };
@@ -164,30 +165,38 @@ const MedicalRecords = () => {
   };
 
   // Delete report
-  const deleteReport = async (date, reportId) => {
-    if (window.confirm("Are you sure you want to delete this report?")) {
-      try {
-        await API.delete(`/reports/${reportId}`);
+  // Delete report
+  const initiateDelete = (date, reportId) => {
+    setConfirmModal({ show: true, date, id: reportId });
+  };
 
-        setReports((prev) => {
-          const updatedDateReports = prev[date].filter(
-            (report) => report.id !== reportId
-          );
+  const confirmDelete = async () => {
+    const { date, id } = confirmModal;
+    if (!date || !id) return;
 
-          if (updatedDateReports.length === 0) {
-            const { [date]: removed, ...rest } = prev;
-            return rest;
-          }
+    try {
+      await API.delete(`/reports/${id}`);
 
-          return {
-            ...prev,
-            [date]: updatedDateReports,
-          };
-        });
-      } catch (err) {
-        console.error("Error deleting report:", err);
-        alert("Failed to delete report");
-      }
+      setReports((prev) => {
+        const updatedDateReports = prev[date].filter(
+          (report) => report.id !== id
+        );
+
+        if (updatedDateReports.length === 0) {
+          const { [date]: removed, ...rest } = prev;
+          return rest;
+        }
+
+        return {
+          ...prev,
+          [date]: updatedDateReports,
+        };
+      });
+    } catch (err) {
+      console.error("Error deleting report:", err);
+      alert("Failed to delete report");
+    } finally {
+      setConfirmModal({ show: false, date: null, id: null });
     }
   };
 
@@ -396,7 +405,7 @@ const MedicalRecords = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteReport(date, report.id);
+                              initiateDelete(date, report.id);
                             }}
                             className="text-red-400 hover:text-red-300 text-xs p-1 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
                             title="Delete report"
@@ -532,6 +541,16 @@ const MedicalRecords = () => {
           </div>
         </div >
       )}
+
+      <ConfirmationModal
+        isOpen={confirmModal.show}
+        onClose={() => setConfirmModal({ show: false, date: null, id: null })}
+        onConfirm={confirmDelete}
+        title="Delete Medical Record"
+        message="Are you sure you want to delete this report? This action cannot be undone."
+        type="danger"
+        confirmText="Delete"
+      />
     </div >
   );
 };

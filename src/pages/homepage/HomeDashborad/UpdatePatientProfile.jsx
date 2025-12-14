@@ -128,6 +128,22 @@ const UpdatePatientProfile = () => {
               <label className="block text-[var(--secondary-color)] mb-2 text-sm">Date of Birth</label>
               <input
                 type="date"
+                value={form.dob}
+                onChange={(e) => {
+                  const dob = e.target.value;
+                  // Auto-calculate age for display
+                  let age = "";
+                  if (dob) {
+                    const birthDate = new Date(dob);
+                    const today = new Date();
+                    age = today.getFullYear() - birthDate.getFullYear();
+                    const m = today.getMonth() - birthDate.getMonth();
+                    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                      age--;
+                    }
+                  }
+                  setForm({ ...form, dob, age });
+                }}
                 className="w-full bg-[var(--bg-color)] text-[var(--text-color)] p-3 rounded-lg border border-[var(--border-color)] outline-none transition-colors"
               />
             </div>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mail } from "lucide-react";
+import { Mail, ArrowLeft } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { forgotpasssword } from "../../api/authservices/authservice";
 import toast from "react-hot-toast";
@@ -43,6 +43,10 @@ const ForgotPassword = () => {
     <div className="min-h-screen w-full  flex justify-center items-center px-4" style={{ backgroundColor: 'var(--bg-color)' }}>
 
       <div className="w-[420px] p-8 rounded-xl shadow-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+
+        <NavLink to="/login" className="inline-flex items-center text-sm mb-4 hover:underline" style={{ color: 'var(--secondary-color)' }}>
+          <ArrowLeft size={16} className="mr-1" /> Back to Login
+        </NavLink>
 
         <h2 className="text-3xl font-semibold text-center mb-4" style={{ color: 'var(--text-color)' }}>
           Forgot Password

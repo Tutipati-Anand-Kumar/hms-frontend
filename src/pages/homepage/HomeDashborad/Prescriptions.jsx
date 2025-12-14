@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { API } from "../../../api/authservices/authservice";
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { FileText, ChevronRight, CheckSquare, Square, Trash2, X } from 'lucide-react';
+import { FileText, ChevronRight, CheckSquare, Square, Trash2 } from 'lucide-react';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 
 const Prescriptions = () => {
   const [prescriptions, setPrescriptions] = useState([]);
@@ -106,7 +107,7 @@ const Prescriptions = () => {
     }
   };
 
-  const cancelDelete = () => {
+  const closeConfirmModal = () => {
     setConfirmState({ ...confirmState, show: false });
   };
 
@@ -124,39 +125,16 @@ const Prescriptions = () => {
   return (
     <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-color)] md:p-8 w-full overflow-y-auto custom-scrollbar relative">
 
-      {/* --- Custom Confirmation Dialog (Top Center) --- */}
-      {confirmState.show && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-down w-[90%] max-w-md">
-          <div className="bg-[var(--card-bg)] border border-[var(--border-color)] shadow-2xl rounded-xl p-4 flex flex-col gap-4">
-            <div className="flex items-start gap-3">
-              <div className="bg-red-500/10 p-2 rounded-full text-red-500 shrink-0">
-                <Trash2 size={24} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-[var(--text-color)]">Confirm Deletion</h3>
-                <p className="text-[var(--secondary-color)] text-sm mt-1">{confirmState.message}</p>
-              </div>
-              <button onClick={cancelDelete} className="text-[var(--secondary-color)] hover:text-[var(--text-color)]">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="flex justify-end gap-3 mt-2">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 text-sm font-medium text-[var(--secondary-color)] hover:bg-[var(--bg-color)] rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors shadow-lg shadow-red-500/20"
-              >
-                Delete Forever
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* --- Shared Confirmation Modal --- */}
+      <ConfirmationModal
+        isOpen={confirmState.show}
+        onClose={closeConfirmModal}
+        onConfirm={confirmDelete}
+        title={confirmState.isBatch ? "Confirm Batch Deletion" : "Confirm Deletion"}
+        message={confirmState.message}
+        type="danger"
+        confirmText="Delete Forever"
+      />
 
       <div className="max-w-7xl mx-auto">
         {/* Header with Actions */}

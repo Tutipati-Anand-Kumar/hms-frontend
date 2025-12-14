@@ -6,6 +6,7 @@ import {
     ChevronRight, ToggleLeft, ToggleRight, HelpCircle, X
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -135,88 +136,54 @@ const Settings = () => {
             </div>
 
             {/* Delete Confirmation Modal */}
-            {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-[var(--card-bg)] w-full max-w-sm rounded-2xl border border-red-500/20 shadow-2xl p-6 transform transition-all animate-in fade-in zoom-in-95 duration-200">
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Shield className="w-8 h-8 text-red-500" />
-                            </div>
-                            <h2 className="text-xl font-bold text-[var(--text-color)] mb-2">Delete Account?</h2>
-                            <p className="text-[var(--secondary-color)] mb-6 text-sm">
-                                Are you sure you want to delete your account? This action cannot be undone.
-                            </p>
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={async () => {
+                    try {
+                        const user = getActiveUser();
+                        const userId = user?.id || user?._id;
+                        if (userId) {
+                            await deleteAccount(userId);
+                            await logoutUser(userId);
+                            navigate('/login');
+                        } else {
+                            setIsDeleteModalOpen(false);
+                            setStatusModal({
+                                isOpen: true,
+                                type: 'danger',
+                                title: 'User Not Found',
+                                message: 'Could not identify the active user account.'
+                            });
+                        }
+                    } catch (error) {
+                        console.error("Delete failed", error);
+                        setIsDeleteModalOpen(false);
+                        setStatusModal({
+                            isOpen: true,
+                            type: 'danger',
+                            title: 'Deletion Failed',
+                            message: 'Failed to delete account. Please try again.'
+                        });
+                    }
+                }}
+                title="Delete Account?"
+                message="Are you sure you want to delete your account? This action cannot be undone."
+                type="danger"
+                confirmText="Yes, Delete"
+            />
 
-                            <div className="flex gap-3 justify-center">
-                                <button
-                                    onClick={() => setIsDeleteModalOpen(false)}
-                                    className="px-5 py-2.5 rounded-xl font-medium bg-[var(--bg-color)] text-[var(--text-color)] border border-[var(--border-color)] hover:bg-[var(--border-color)] transition-colors"
-                                >
-                                    No, Keep It
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const user = getActiveUser();
-                                            const userId = user?.id || user?._id;
-                                            if (userId) {
-                                                await deleteAccount(userId);
-                                                await logoutUser(userId);
-                                                navigate('/login');
-                                            } else {
-                                                setIsDeleteModalOpen(false);
-                                                setStatusModal({
-                                                    isOpen: true,
-                                                    type: 'error',
-                                                    title: 'User Not Found',
-                                                    message: 'Could not identify the active user account.'
-                                                });
-                                            }
-                                        } catch (error) {
-                                            console.error("Delete failed", error);
-                                            setIsDeleteModalOpen(false);
-                                            setStatusModal({
-                                                isOpen: true,
-                                                type: 'error',
-                                                title: 'Deletion Failed',
-                                                message: 'Failed to delete account. Please try again.'
-                                            });
-                                        }
-                                    }}
-                                    className="px-5 py-2.5 rounded-xl font-medium bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-all"
-                                >
-                                    Yes, Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Status Modal */}
-            {statusModal.isOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-[var(--card-bg)] w-full max-w-sm rounded-2xl border border-[var(--border-color)] shadow-2xl p-6 transform transition-all animate-in fade-in zoom-in-95 duration-200 text-center">
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${statusModal.type === 'success' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                            {statusModal.type === 'success' ? (
-                                <Shield className="w-8 h-8 text-green-500" />
-                            ) : (
-                                <X className="w-8 h-8 text-red-500" />
-                            )}
-                        </div>
-                        <h2 className="text-xl font-bold text-[var(--text-color)] mb-2">{statusModal.title}</h2>
-                        <p className="text-[var(--secondary-color)] mb-6 text-sm">
-                            {statusModal.message}
-                        </p>
-                        <button
-                            onClick={() => setStatusModal({ ...statusModal, isOpen: false })}
-                            className="w-full py-2.5 rounded-xl font-medium bg-[var(--bg-color)] text-[var(--text-color)] border border-[var(--border-color)] hover:bg-[var(--border-color)] transition-colors"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Status Modal - Using ConfirmationModal as an Alert */}
+            <ConfirmationModal
+                isOpen={statusModal.isOpen}
+                onClose={() => setStatusModal({ ...statusModal, isOpen: false })}
+                onConfirm={() => setStatusModal({ ...statusModal, isOpen: false })}
+                title={statusModal.title}
+                message={statusModal.message}
+                type={statusModal.type === 'error' ? 'danger' : statusModal.type}
+                confirmText="Close"
+                cancelText="Close" // Hiding one button effectively or just formatting as alert
+            />
         </div>
     );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-import { createDoctor, listHospitals } from "../../api/admin/adminServices";
+import { CreateDoctor, listHospitals } from "../../api/admin/adminServices";
 import { createDoctorByHelpdesk, getHelpDeskMe } from "../../api/helpdesk/helpdeskService";
 import { getActiveUser } from "../../api/authservices/authservice";
 import { UserPlus, Stethoscope, Building2, Eye, EyeOff } from "lucide-react";

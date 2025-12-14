@@ -71,7 +71,7 @@ const AdminNavbar = ({
                 {/* Search Bar */}
                 <div className="flex-1 max-w-xl max-sm:hidden max-lg:hidden">
                     <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-400 transition-colors" size={20} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-400 transition-colors max-[625px]:text-[14px] max-[625px]:size-[14px]" size={20} />
                         <input
                             type="text"
                             placeholder={searchPlaceholder}
@@ -146,21 +146,21 @@ const AdminNavbar = ({
             </div>
 
             {/* Mobile Search & Filter (Visible below main navbar on small/tablet screens) */}
-            <div className="px-4 pb-3 flex flex-row items-center gap-2 lg:hidden">
+            <div className="px-4 pb-3 flex flex-row items-center gap-2 lg:hidden max-[625px]:px-2 max-[625px]:py-2">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 max-[625px]:left-2" size={16} />
                     <input
                         type="text"
                         placeholder={searchPlaceholder}
                         onChange={(e) => onSearch && onSearch(e.target.value)}
-                        className="w-full bg-[var(--card-bg)] text-[var(--text-color)] pl-9 pr-3 py-1.5 rounded-lg border border-[var(--border-color)] focus:border-blue-500 outline-none text-sm h-9"
+                        className="w-full bg-[var(--card-bg)] text-[var(--text-color)] pl-9 pr-3 py-1.5 rounded-lg border border-[var(--border-color)] focus:border-blue-500 outline-none text-sm h-9 max-[625px]:text-xs max-[625px]:pl-7 max-[625px]:h-8 max-[625px]:pr-2 max-[625px]:py-1 max-[625px]:rounded-md"
                     />
                 </div>
                 {filters.map((filter) => (
                     <select
                         key={filter.key}
                         onChange={(e) => onFilterChange && onFilterChange(filter.key, e.target.value)}
-                        className="bg-[var(--card-bg)] text-[var(--text-color)] text-sm px-2 py-1.5 rounded-lg border border-[var(--border-color)] focus:border-purple-500 outline-none h-9"
+                        className="bg-[var(--card-bg)] text-[var(--text-color)] text-sm px-2 py-1.5 rounded-lg border border-[var(--border-color)] focus:border-purple-500 outline-none h-9 max-[625px]:w-24 max-[625px]:text-[10px] max-[625px]:px-1 max-[625px]:py-1 max-[625px]:rounded-md max-[625px]:h-8"
                     >
                         <option value="">{filter.label}</option>
                         {filter.options.map((opt) => (
