@@ -192,7 +192,7 @@ const Prescriptions = () => {
               return (
                 <div
                   key={pres._id}
-                  onClick={() => !confirmState.show && navigate(`/home/prescriptions/${pres._id}`)}
+                  onClick={() => !confirmModal.isOpen && navigate(`/home/prescriptions/${pres._id}`)}
                   className={`group bg-[var(--card-bg)] p-5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-full relative ${isSelected ? 'border-blue-500 ring-1 ring-blue-500 shadow-md shadow-blue-500/10' : 'border-[var(--border-color)] hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10'}`}
                 >
                   {/* Checkbox (Top Left) */}

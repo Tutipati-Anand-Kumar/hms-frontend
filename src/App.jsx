@@ -3,7 +3,6 @@ import { RouterProvider } from 'react-router-dom'
 import "./style/App.css"
 import route from './routes/Route'
 import { Toaster } from 'react-hot-toast'
-
 import { AuthProvider } from './context/AuthContext'
 
 const App = () => {

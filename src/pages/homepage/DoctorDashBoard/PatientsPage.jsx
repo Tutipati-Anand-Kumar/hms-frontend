@@ -110,7 +110,7 @@ export default function PatientsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className=" p-5 rounded-xl border border-red-900/50">
                   <p className=" font-semibold mb-2 text-lg">Conditions</p>
-                  <p className="text-gray-400">{selectedPatient.health.conditions || "None"}</p>
+                  <p className="text-gray-400">{selectedPatient.health.medicalHistory || selectedPatient.health.conditions || "None"}</p>
                 </div>
                 <div className=" p-5 rounded-xl border border-yellow-900/50">
                   <p className=" font-semibold mb-2 text-lg">Allergies</p>
