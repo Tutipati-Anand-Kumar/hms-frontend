@@ -164,6 +164,11 @@ export const sendOtp = async (data) => {
   return res.data;
 };
 
+export const checkUserExistence = async (data) => {
+  const res = await API.post("/auth/check-existence", data);
+  return res.data;
+};
+
 export const forgotpasssword = async (data) => {
   const res = await API.post("/auth/forgot-password", data);
   return res.data;

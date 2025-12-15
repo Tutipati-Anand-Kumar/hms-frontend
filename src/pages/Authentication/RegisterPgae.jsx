@@ -11,11 +11,11 @@ import {
   Loader2
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { registerUser, sendOtp } from "../../api/authservices/authservice";
+import { registerUser, sendOtp, checkUserExistence } from "../../api/authservices/authservice";
 import toast from "react-hot-toast";
 
 const RegisterPage = () => {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   const location = useLocation();
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -111,8 +111,8 @@ const RegisterPage = () => {
     try {
       await registerUser(form);
       toast.success("Registration Successful", { duration: 2000 });
-      
-     
+
+
       setTimeout(() => navigate("/login"));
     } catch (err) {
       const msg = err.response?.data?.message || "Registration Failed";
@@ -125,6 +125,21 @@ const RegisterPage = () => {
   const handleMobileChange = (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 10);
     setForm({ ...form, mobile: value });
+  };
+
+  const handleInputBlur = async (field, value) => {
+    if (!value) return;
+    // Basic format check before API call
+    if (field === 'email' && !emailRegex.test(value)) return;
+    if (field === 'mobile' && !mobileRegex.test(value)) return;
+
+    try {
+      await checkUserExistence({ field, value });
+      setErrors((prev) => ({ ...prev, [field]: "" })); // Clear error if available
+    } catch (err) {
+      const msg = err.response?.data?.message || `${field} unavailable`;
+      setErrors((prev) => ({ ...prev, [field]: msg }));
+    }
   };
 
   return (
@@ -211,6 +226,7 @@ const RegisterPage = () => {
                     value={form.mobile}
                     placeholder="Enter mobile number"
                     onChange={handleMobileChange}
+                    onBlur={() => handleInputBlur('mobile', form.mobile)}
                     className="bg-transparent outline-none ml-3 w-full placeholder-gray-500"
                     style={{ color: 'var(--text-color)' }}
                   />
@@ -236,6 +252,7 @@ const RegisterPage = () => {
                       onChange={(e) =>
                         setForm({ ...form, email: e.target.value })
                       }
+                      onBlur={() => handleInputBlur('email', form.email)}
                       className="bg-transparent outline-none w-full placeholder-gray-500"
                       style={{ color: 'var(--text-color)' }}
                     />

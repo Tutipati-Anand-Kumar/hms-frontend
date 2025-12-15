@@ -196,7 +196,12 @@ const UpdateDoctorProfile = () => {
         quickNotes: form.quickNotes.filter(n => n.text && n.text.trim() !== "")
       };
 
-      console.log("Submitting payload:", payload);
+      console.log("PAYLOAD DEBUG:", {
+        fee: form.consultationFee,
+        hospitalId: form.hospitalId,
+        fullPayload: payload
+      });
+
       await updateMyProfile(payload);
       toast.success("Profile updated");
       navigate('/doctor/profile');
@@ -515,6 +520,8 @@ const UpdateDoctorProfile = () => {
                 <label className="block text-sm mb-2" style={{ color: 'var(--secondary-color)' }}>Experience Start Date</label>
                 <input
                   type="date"
+                  value={experienceStart}
+                  onChange={(e) => setExperienceStart(e.target.value)}
                   className="w-full p-3 rounded-lg outline-none transition-colors bg-[var(--bg-color)] text-[var(--text-color)] border border-[var(--border-color)]"
                 />
                 <p className="text-xs mt-1" style={{ color: 'var(--secondary-color)' }}>Used to calculate years of experience.</p>

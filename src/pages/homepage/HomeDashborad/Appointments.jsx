@@ -62,10 +62,13 @@ export default function Appointment() {
         hospital_name: passedDoc.hospitals?.[0]?.name || "Unknown",
         rating: 4.5,
         photo: passedDoc.profilePic || passedDoc.photo, // Use profilePic if available
-        availability: passedDoc.availability || ["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM"]
+        availability: passedDoc.availability || ["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM"],
+        consultationFee: passedDoc.hospitals?.[0]?.consultationFee || "N/A"
       };
       setDoctor(normalizedDoc);
       setSelectedDoctorId(normalizedDoc._id);
+
+      console.log("Appointment Doctor Data:", normalizedDoc); // DEBUG LOG
 
       // Set urgency and symptoms if passed
       if (location.state.urgency) setUrgency(location.state.urgency);
@@ -301,6 +304,7 @@ export default function Appointment() {
                     </p>
                   )}
                   <p className="text-[var(--secondary-color)] text-sm">🏥 {doctor.hospital_name}</p>
+                  <p className="text-green-600 font-bold text-sm">💰 Consultation Fee: ₹{doctor.consultationFee}</p>
                 </div>
               </div>
 

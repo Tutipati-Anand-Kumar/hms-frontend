@@ -135,7 +135,7 @@ const DoctorProfile = () => {
             <InfoItem
               icon={Activity}
               label="Consultation Fee"
-              value={profile.hospitals?.[0]?.consultationFee ? `₹${profile.hospitals[0].consultationFee}` : "-"}
+              value={profile.hospitals?.[0]?.consultationFee ? <span className="text-green-500 font-bold text-lg">₹{profile.hospitals[0].consultationFee}</span> : "-"}
               color="text-blue-400"
               bgColor="bg-blue-400/10"
             />
