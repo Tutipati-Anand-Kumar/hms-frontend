@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { Cropper } from "react-advanced-cropper";
+import "react-advanced-cropper/dist/style.css";
 import { useNavigate } from "react-router-dom";
 import { getMyProfile, updateMyProfile } from "../../../api/doctors/doctorService";
 import toast from "react-hot-toast";
@@ -23,6 +25,11 @@ const UpdateDoctorProfile = () => {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Cropper State & Refs
+  const cropperRef = useRef(null);
+  const [showCropper, setShowCropper] = useState(false);
+  const [tempImg, setTempImg] = useState(null);
 
   // New Availability State
   const [availDays, setAvailDays] = useState([]);
@@ -72,6 +79,7 @@ const UpdateDoctorProfile = () => {
   }, []);
 
   const handleFileUpload = async (e) => {
+    // Legacy direct upload method kept for reference/fallback if needed
     const file = e.target.files[0];
     if (!file) return;
 
@@ -91,6 +99,79 @@ const UpdateDoctorProfile = () => {
       toast.error("Upload failed");
     } finally {
       setUploading(false);
+    }
+  };
+
+  // New Cropper Handlers
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setTempImg(previewUrl);
+      setShowCropper(true);
+      // Reset input value to allow re-selecting same file
+      e.target.value = null;
+    }
+  };
+
+  const handleCropSave = async () => {
+    const cropper = cropperRef.current;
+    if (cropper) {
+      const canvas = cropper.getCanvas();
+      if (canvas) {
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            console.log("DEBUG: Blob created", blob);
+            console.log("DEBUG: Blob size", blob.size);
+
+            // Upload the cropped blob immediately to maintain compatibility with existing profilePic URL logic
+            const formData = new FormData();
+            formData.append("photo", blob, "cropped-profile.jpg");
+
+            // Log FormData keys to verify
+            for (let pair of formData.entries()) {
+              console.log("DEBUG: FormData Entry:", pair[0], pair[1]);
+            }
+
+            setUploading(true);
+            try {
+              console.log("DEBUG: Importing API...");
+              const { API } = await import("../../../api/authservices/authservice");
+              console.log("DEBUG: Sending request...");
+              const res = await API.post("/doctors/upload-photo", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+              });
+
+              console.log("DEBUG: Response received", res);
+              console.log("DEBUG: Response Data", res.data);
+
+              if (res.data && res.data.url) {
+                setProfilePic(res.data.url);
+                toast.success("Crop saved & Uploaded ✅");
+                setShowCropper(false);
+              } else {
+                console.error("DEBUG: No URL in response data");
+                toast.error("Upload successful but no URL returned");
+              }
+            } catch (err) {
+              console.error("DEBUG: Upload Error", err);
+              if (err.response) {
+                console.error("DEBUG: Error Response Data", err.response.data);
+              }
+              toast.error("Upload failed");
+            } finally {
+              setUploading(false);
+            }
+          } else {
+            console.error("DEBUG: Blob creation failed");
+            toast.error("Failed to crop ❌");
+          }
+        }, "image/jpeg");
+      } else {
+        console.error("DEBUG: Canvas is null");
+      }
+    } else {
+      console.error("DEBUG: Cropper ref is null");
     }
   };
 
@@ -288,7 +369,7 @@ const UpdateDoctorProfile = () => {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={handleFileUpload}
+                      onChange={handleFileSelect}
                       className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
                       style={{ color: 'var(--text-color)' }}
                     />
@@ -549,7 +630,50 @@ const UpdateDoctorProfile = () => {
           </button>
         </form>
       </div>
-    </div>
+
+
+      {/* 👇 FULLSCREEN CROP MODAL */}
+      {
+        showCropper && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-3xl bg-transparent">
+            <div className="w-[90%] h-[80%] bg-white/15 backdrop-blur-3xl border border-white/40 rounded-2xl shadow-2xl flex flex-col items-center justify-center p-6 overflow-hidden">
+              <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-sky-500 text-2xl font-semibold mb-4">
+                Crop Your Profile Photo
+              </h3>
+
+              <div className="w-full h-full rounded-xl overflow-hidden">
+                <Cropper
+                  ref={cropperRef}
+                  src={tempImg}
+                  className="w-full h-full"
+                  stencilProps={{ aspectRatio: 1 }}
+                  style={{ background: "transparent" }}
+                  imageRestriction="none"
+                />
+              </div>
+
+              <div className="flex gap-6 mt-6">
+                <button
+                  type="button"
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm px-6 py-2 rounded-md shadow-md transition-all duration-300"
+                  onClick={handleCropSave}
+                >
+                  Save Crop
+                </button>
+
+                <button
+                  type="button"
+                  className="bg-red-600 hover:bg-red-700 text-white text-sm px-6 py-2 rounded-md shadow-md transition-all duration-300"
+                  onClick={() => setShowCropper(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };
 
