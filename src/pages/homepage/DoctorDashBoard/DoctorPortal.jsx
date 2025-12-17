@@ -145,7 +145,7 @@ export default function DoctorPortal() {
 
       {/* Main Content */}
       <div className="lg:ml-54 pt-16 min-h-screen transition-all duration-300">
-        <div className="p-4 lg:p-6">
+        <div className="p-4 lg:p-6 max-[650px]:p-2">
           <Outlet context={{ setNavbarConfig }} />
         </div>
       </div>

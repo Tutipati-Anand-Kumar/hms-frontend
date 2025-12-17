@@ -19,7 +19,10 @@ export default function DoctorMessages() {
     const [selectedDoctor, setSelectedDoctor] = useState(null);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(""); // Restored
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [activeReactionId, setActiveReactionId] = useState(null); // New state for click-to-react
+
     const [loading, setLoading] = useState(true);
 
     // Chat Features
@@ -28,17 +31,6 @@ export default function DoctorMessages() {
     const [selectedMessages, setSelectedMessages] = useState(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [isTouch, setIsTouch] = useState(false);
-
-    // Modal State
-    const [confirmModal, setConfirmModal] = useState({
-        isOpen: false,
-        title: "",
-        message: "",
-        confirmText: "Delete",
-        cancelText: "Cancel",
-        type: "danger",
-        action: null
-    });
 
     const socketRef = useRef();
     const messagesEndRef = useRef(null);
@@ -75,6 +67,34 @@ export default function DoctorMessages() {
             socketRef.current.disconnect();
         };
     }, []);
+
+    // Re-fetch on Tab Focus (Fixes "not showing instantly" after tab switch)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // Determine what to refetch
+                if (selectedDoctor) {
+                    // Refetch current chat
+                    API.get(`/messages/conversation/${selectedDoctor._id}`)
+                        .then(res => setMessages(res.data))
+                        .catch(err => console.error("Refetch chat failed", err));
+                } else {
+                    // Refetch list
+                    fetchConversations();
+                }
+
+                // Ensure socket is connected
+                if (socketRef.current && !socketRef.current.connected) {
+                    socketRef.current.connect();
+                }
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
+    }, [selectedDoctor]);
 
     // Workaround for closure staleness in socket callback for selectedDoctor
     useEffect(() => {
@@ -131,6 +151,7 @@ export default function DoctorMessages() {
         setSelectedMessages(new Set());
         setReplyingTo(null);
         setNewMessage("");
+        setActiveReactionId(null); // Close reaction picker on chat change
         try {
             const res = await API.get(`/messages/conversation/${doc._id}`);
             setMessages(res.data);
@@ -170,9 +191,20 @@ export default function DoctorMessages() {
         }
     };
 
+    const handleReaction = async (msgId, emoji) => {
+        try {
+            const res = await API.post(`/messages/${msgId}/react`, { emoji });
+            // Socket usually handles update, but fast local update is good
+            setMessages(prev => prev.map(m => m._id === msgId ? res.data : m));
+        } catch (err) {
+            console.error("Reaction failed", err);
+        }
+    };
+
     const handleMessageLongPress = (msgId) => {
         setIsSelectionMode(true);
         toggleSelection(msgId);
+        setActiveReactionId(null); // Close reaction picker on long press
     };
 
     const toggleSelection = (msgId) => {
@@ -187,9 +219,13 @@ export default function DoctorMessages() {
     };
 
     const handleMessageClick = (msgId) => {
-        if (isSelectionMode) toggleSelection(msgId);
+        if (isSelectionMode) {
+            toggleSelection(msgId);
+        } else {
+            // Toggle reaction picker on click
+            setActiveReactionId(prev => prev === msgId ? null : msgId);
+        }
     };
-
     const handleCopy = () => {
         const txt = messages.filter(m => selectedMessages.has(m._id)).map(m => m.content).join("\n");
         if (txt) {
@@ -209,6 +245,7 @@ export default function DoctorMessages() {
             setNewMessage(msg.content);
             setIsSelectionMode(false);
             setSelectedMessages(new Set());
+            setActiveReactionId(null); // Close reaction picker on edit
         } else {
             alert("Cannot edit this message.");
         }
@@ -254,11 +291,20 @@ export default function DoctorMessages() {
                 type: "danger"
             });
         }
+        setActiveReactionId(null); // Close reaction picker on delete
     };
 
     const handleSingleDelete = (msgId) => {
         const msg = messages.find(m => m._id === msgId);
         if (!msg) return;
+
+        // Special case for Tombstones ("This message was deleted")
+        if (msg.isDeleted) {
+            // Delete immediately for me, no modal needed
+            handleDeleteForMe([msgId]);
+            return;
+        }
+
         if (String(msg.sender?._id || msg.sender) === String(user.id)) {
             setConfirmModal({
                 isOpen: true,
@@ -274,6 +320,7 @@ export default function DoctorMessages() {
         } else {
             handleDeleteForMe([msgId]);
         }
+        setActiveReactionId(null); // Close reaction picker on delete
     };
 
     const handleDeleteForMe = async (idsOverride = null) => {
@@ -291,6 +338,15 @@ export default function DoctorMessages() {
         const ids = Array.isArray(idsOverride) ? idsOverride : Array.from(selectedMessages);
         try {
             await Promise.all(ids.map(id => API.delete(`/messages/${id}`, { data: { deleteForEveryone: true } })));
+
+            // OPTIMISTIC UPDATE: specific fix for "not deleting immediately"
+            setMessages(prev => prev.map(m => {
+                if (ids.includes(m._id)) {
+                    return { ...m, isDeleted: true, content: "This message was deleted", reactions: [] };
+                }
+                return m;
+            }));
+
             setSelectedMessages(new Set());
             setIsSelectionMode(false);
         } catch (e) { console.error("Del failed", e); }
@@ -407,7 +463,7 @@ export default function DoctorMessages() {
                         )}
 
                         {/* Messages List */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar bg-[var(--bg-color)]" style={{ backgroundImage: "url('/assets/chat-bg.png')", backgroundSize: 'contain' }}>
+                        <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar bg-[var(--bg-color)]" style={{ backgroundImage: "url('/assets/chat-bg.png')", backgroundSize: 'contain' }}>
                             {messages.length === 0 ? (
                                 <div className="text-center mt-10 text-gray-400">No messages yet. Say hello!</div>
                             ) : (
@@ -457,10 +513,10 @@ export default function DoctorMessages() {
                                                     </div>
                                                 </div>
 
-                                                {/* Hover Menu */}
+                                                {/* Hover Menu (Actions Only - No Reactions) */}
                                                 {!isSelectionMode && !msg.isDeleted && (
                                                     <div className={`absolute -top-3 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} hidden group-hover:flex items-center gap-1 bg-white dark:bg-gray-700 shadow-md rounded-full px-2 py-1 z-20`}>
-                                                        <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); inputRef.current?.focus(); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full text-gray-600 dark:text-gray-300" title="Reply">
+                                                        <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); inputRef.current?.focus(); setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full text-gray-600 dark:text-gray-300" title="Reply">
                                                             <FaReply size={12} />
                                                         </button>
                                                         {isMe && (new Date() - new Date(msg.createdAt) < 24 * 60 * 60 * 1000) && (
@@ -474,6 +530,39 @@ export default function DoctorMessages() {
                                                         <button onClick={(e) => { e.stopPropagation(); setIsSelectionMode(true); toggleSelection(msg._id); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full text-green-500" title="Select">
                                                             <FaCheckCircle size={12} />
                                                         </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Click-triggered Reaction Picker */}
+                                                {activeReactionId === msg._id && !isSelectionMode && !msg.isDeleted && (
+                                                    <div className={`absolute -top-10 ${isMe ? 'right-0' : 'left-0'} flex items-center gap-0.5 bg-white dark:bg-gray-700 shadow-lg rounded-full px-3 py-1.5 z-30 animate-in fade-in zoom-in duration-200`}>
+                                                        {["👍", "❤️", "😂", "😮", "😢", "🙏"].map(emoji => (
+                                                            <button
+                                                                key={emoji}
+                                                                onClick={(e) => { e.stopPropagation(); handleReaction(msg._id, emoji); setActiveReactionId(null); }}
+                                                                className="hover:scale-125 transition-transform p-1 text-xl"
+                                                            >
+                                                                {emoji}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {/* Tombstone Hover Delete (For "This message was deleted") */}
+                                                {!isSelectionMode && msg.isDeleted && (
+                                                    <div className={`absolute -top-3 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} hidden group-hover:block bg-white dark:bg-gray-700 shadow-md rounded-full px-2 py-1 z-20`}>
+                                                        <button onClick={(e) => { e.stopPropagation(); handleSingleDelete(msg._id); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full text-red-500" title="Delete from view">
+                                                            <FaTrash size={12} />
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Reactions Display (On Bubble) - No Border */}
+                                                {msg.reactions && msg.reactions.length > 0 && !msg.isDeleted && (
+                                                    <div className={`absolute -top-2 ${isMe ? 'left-0 -translate-x-2' : 'right-0 translate-x-2'} flex items-center bg-white dark:bg-gray-800 rounded-full px-1 shadow-sm z-10 scale-75`}>
+                                                        {Array.from(new Set(msg.reactions.map(r => r.emoji))).slice(0, 3).map((e, i) => (
+                                                            <span key={i} className="text-xs">{e}</span>
+                                                        ))}
+                                                        {msg.reactions.length > 1 && <span className="text-[8px] text-gray-500 ml-0.5">{msg.reactions.length}</span>}
                                                     </div>
                                                 )}
                                             </div>
@@ -515,7 +604,7 @@ export default function DoctorMessages() {
                                 <input
                                     ref={inputRef}
                                     type="text"
-                                    className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-500 max-h-32 overflow-y-auto"
+                                    className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-500 max-h-32 overflow-y-auto outline-none"
                                     placeholder="Type a message..."
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}

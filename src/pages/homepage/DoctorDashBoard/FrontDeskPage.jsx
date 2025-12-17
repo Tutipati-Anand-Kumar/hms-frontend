@@ -21,6 +21,7 @@ export default function FrontDeskPage() {
   const [selectedMessages, setSelectedMessages] = useState(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isTouch, setIsTouch] = useState(false); // Detect touch device
+  const [activeReactionId, setActiveReactionId] = useState(null); // New state
 
   // Confirmation Modal State (Replaced modalConfig)
   const [confirmModal, setConfirmModal] = useState({
@@ -36,6 +37,7 @@ export default function FrontDeskPage() {
   const socketRef = useRef();
   const messagesEndRef = useRef(null);
   const longPressTimer = useRef(null);
+  const inputRef = useRef(null);
   const user = getActiveUser();
 
   useEffect(() => {
@@ -64,6 +66,25 @@ export default function FrontDeskPage() {
       socketRef.current.disconnect();
     };
   }, []);
+
+  // Re-fetch on Tab Focus (Fixes "not showing instantly" after tab switch)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && helpDeskUser) {
+        // Re-fetch messages to ensure sync
+        fetchMessages(helpDeskUser._id || helpDeskUser);
+        // Ensure socket is connected
+        if (socketRef.current && !socketRef.current.connected) {
+          socketRef.current.connect();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [helpDeskUser]);
 
   // Update Navbar based on Selection Mode
   useEffect(() => {
@@ -171,6 +192,15 @@ export default function FrontDeskPage() {
     }
   };
 
+  const handleReaction = async (msgId, emoji) => {
+    try {
+      const res = await API.post(`/messages/${msgId}/react`, { emoji });
+      setMessages(prev => prev.map(m => m._id === msgId ? res.data : m));
+    } catch (err) {
+      console.error("Reaction failed", err);
+    }
+  };
+
   // --- SELECTION & DELETION LOGIC ---
 
   const handleMessageLongPress = (msgId) => {
@@ -194,6 +224,9 @@ export default function FrontDeskPage() {
   const handleMessageClick = (msgId) => {
     if (isSelectionMode) {
       toggleSelection(msgId);
+    } else {
+      // Toggle reaction picker
+      setActiveReactionId(prev => prev === msgId ? null : msgId);
     }
   };
 
@@ -281,14 +314,21 @@ export default function FrontDeskPage() {
     const msg = messages.find(m => m._id === msgId);
     if (!msg) return;
 
+    // Special case for Tombstones ("This message was deleted")
+    if (msg.isDeleted) {
+      // Delete immediately for me, no modal needed
+      handleDeleteForMe([msgId]);
+      return;
+    }
+
     if (String(msg.sender?._id || msg.sender) === String(user.id)) {
       setConfirmModal({
         isOpen: true,
         title: 'Delete Message?',
-        message: "Do you want to delete this message?",
-        confirmText: "Delete for Everyone",
+        message: "Delete for everyone or just you?",
+        confirmText: "Everyone",
         onConfirm: () => handleDeleteForEveryone([msgId]),
-        secondaryConfirmText: "Delete for Me",
+        secondaryConfirmText: "Me",
         onSecondaryConfirm: () => handleDeleteForMe([msgId]),
         cancelText: "Cancel",
         type: "danger"
@@ -313,6 +353,15 @@ export default function FrontDeskPage() {
     const itemsToDelete = Array.isArray(idsOverride) ? idsOverride : Array.from(selectedMessages);
     try {
       await Promise.all(itemsToDelete.map(id => API.delete(`/messages/${id}`, { data: { deleteForEveryone: true } })));
+
+      // OPTIMISTIC UPDATE: specific fix for "not deleting immediately"
+      setMessages(prev => prev.map(m => {
+        if (itemsToDelete.includes(m._id)) {
+          return { ...m, isDeleted: true, content: "This message was deleted", reactions: [] };
+        }
+        return m;
+      }));
+
       setSelectedMessages(new Set());
       setIsSelectionMode(false);
     } catch (err) { console.error("Create failed", err); }
@@ -345,7 +394,7 @@ export default function FrontDeskPage() {
       {!isSelectionMode && (
         <div className="p-4 flex justify-between items-center bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm z-10">
           <div>
-            <h1 className="text-xl font-bold text-gray-800 dark:text-blue-400">Front Desk Chat</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-blue-400 max-[650px]:text-sm">Front Desk Chat</h1>
             {hospital && (
               <p className="text-xs text-gray-500">
                 {hospital.name}
@@ -362,7 +411,7 @@ export default function FrontDeskPage() {
       )}
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar" style={{ backgroundImage: "url('/assets/chat-bg.png')", backgroundSize: 'contain' }}>
+      <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar" style={{ backgroundImage: "url('/assets/chat-bg.png')", backgroundSize: 'contain' }}>
         {loading ? (
           <div className="text-center mt-10 text-gray-400">Loading...</div>
         ) : !helpDeskUser ? (
@@ -393,7 +442,7 @@ export default function FrontDeskPage() {
 
                   {/* Message Bubble */}
                   <div
-                    className={`px-3 py-1.5 rounded-lg shadow-sm border text-sm relative 
+                    className={`px-2 py-1.5 rounded-lg shadow-sm border text-sm relative 
                     ${isMe ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100 rounded-tr-none border-transparent" : "bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 rounded-tl-none border-transparent"}
                     ${isSelected ? 'opacity-90 mix-blend-multiply dark:mix-blend-screen' : ''}
                     `}
@@ -425,10 +474,10 @@ export default function FrontDeskPage() {
                     </div>
                   </div>
 
-                  {/* Hover Actions (Desktop) */}
+                  {/* Hover Actions (Desktop) - Actions Only */}
                   {!isSelectionMode && !isTouch && !msg.isDeleted && (
                     <div className={`absolute -top-3 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} hidden group-hover:flex items-center gap-1 bg-white dark:bg-gray-700 shadow-md rounded-full px-2 py-1 z-20`}>
-                      <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full text-gray-600 dark:text-gray-300" title="Reply">
+                      <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); inputRef.current?.focus(); setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full text-gray-600 dark:text-gray-300" title="Reply">
                         <FaReply size={12} />
                       </button>
 
@@ -448,7 +497,39 @@ export default function FrontDeskPage() {
                     </div>
                   )}
 
-                  {/* Mobile Long Press Indicator/Hint (Optional) */}
+                  {/* Click-triggered Reaction Picker */}
+                  {activeReactionId === msg._id && !isSelectionMode && !msg.isDeleted && (
+                    <div className={`absolute -top-10 ${isMe ? 'right-0' : 'left-0'} flex items-center gap-0.5 bg-white dark:bg-gray-700 shadow-lg rounded-full px-3 py-1.5 z-30 animate-in fade-in zoom-in duration-200`}>
+                      {["👍", "❤️", "😂", "😮", "😢", "🙏"].map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={(e) => { e.stopPropagation(); handleReaction(msg._id, emoji); setActiveReactionId(null); }}
+                          className="hover:scale-125 transition-transform p-1 text-xl"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Tombstone Hover Delete (For "This message was deleted") */}
+                  {!isSelectionMode && msg.isDeleted && (
+                    <div className={`absolute -top-3 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} hidden group-hover:block bg-white dark:bg-gray-700 shadow-md rounded-full px-2 py-1 z-20`}>
+                      <button onClick={(e) => { e.stopPropagation(); handleSingleDelete(msg._id); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full text-red-500" title="Delete from view">
+                        <FaTrash size={12} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Reactions Display (On Bubble) - No Border */}
+                  {msg.reactions && msg.reactions.length > 0 && !msg.isDeleted && (
+                    <div className={`absolute -top-2 ${isMe ? 'left-0 -translate-x-2' : 'right-0 translate-x-2'} flex items-center bg-white dark:bg-gray-800 rounded-full px-1 shadow-sm z-10 scale-75`}>
+                      {Array.from(new Set(msg.reactions.map(r => r.emoji))).slice(0, 3).map((e, i) => (
+                        <span key={i} className="text-xs">{e}</span>
+                      ))}
+                      {msg.reactions.length > 1 && <span className="text-[8px] text-gray-500 ml-0.5">{msg.reactions.length}</span>}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -486,8 +567,9 @@ export default function FrontDeskPage() {
       <div className="p-3 bg-gray-100 dark:bg-[#202c33] flex items-end gap-2 z-20">
         <div className="flex-1 bg-white dark:bg-[#2a3942] rounded-2xl flex items-center px-4 py-2 shadow-sm border border-transparent focus-within:border-green-500 transition-all">
           <input
+            ref={inputRef}
             type="text"
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-500 max-h-32 overflow-y-auto"
+            className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-500 max-h-32 overflow-y-auto outline-none"
             placeholder="Type a message"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
