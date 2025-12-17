@@ -70,7 +70,8 @@ const SwipeableNotificationItem = ({ notification, onMarkRead, onDelete }) => {
                 borderBottom: '1px solid var(--border-color)',
                 transform: `translateX(${translateX}px)`,
                 opacity: opacity,
-                transition: isSwiping ? 'none' : 'transform 0.3s ease, opacity 0.3s ease'
+                transition: isSwiping ? 'none' : 'transform 0.3s ease, opacity 0.3s ease',
+                touchAction: 'pan-y' // Vital: Allow vertical scroll but let JS handle horizontal
             }}
             onClick={() => onMarkRead(notification._id)}
             onMouseEnter={(e) => {
