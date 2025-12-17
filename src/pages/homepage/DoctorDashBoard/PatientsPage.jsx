@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { API } from "../../../api/authservices/authservice";
 import useDebounce from "../../../hooks/useDebounce";
+import { FaDownload, FaTimes } from "react-icons/fa";
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState([]);
@@ -8,6 +9,11 @@ export default function PatientsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500); // Debounce search
   const [selectedPatient, setSelectedPatient] = useState(null);
+
+  // View Report State
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+  const [textContent, setTextContent] = useState(null); // Added state for text content
 
   useEffect(() => {
     fetchPatients();
@@ -40,6 +46,73 @@ export default function PatientsPage() {
     (p.mobile && p.mobile.includes(debouncedSearch)) ||
     (p.mrn && p.mrn.toLowerCase().includes(debouncedSearch.toLowerCase()))
   );
+
+  // --- Report Viewing Logic ---
+
+  const isPDF = (type) => type === "application/pdf";
+  // Updated isDoc to exclude text/plain
+  const isDoc = (type) => (type.includes("word") || type.includes("document")) && !type.includes("text/plain");
+
+  const openReport = async (report) => {
+    console.log("📂 Opening Report:", report);
+    setSelectedReport(report);
+    setPdfBlobUrl(null);
+    setTextContent(null); // Reset text content
+
+    // If it's a text file, fetch content directly
+    if (report.type === 'text/plain') {
+      console.log("📄 Fetching Text Content...");
+      try {
+        const response = await fetch(report.url);
+        if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+        const text = await response.text();
+        setTextContent(text);
+      } catch (err) {
+        console.error("❌ Text fetch failed:", err);
+        setTextContent("Error loading text content.");
+      }
+      return;
+    }
+
+    // If it's a PDF, fetch as blob to display inline
+    if (isPDF(report.type)) {
+      try {
+        console.log("🔐 Fetching PDF content...");
+        const response = await fetch(report.url);
+        if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+
+        const blob = await response.blob();
+        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(pdfBlob);
+
+        setPdfBlobUrl(blobUrl);
+        console.log("✅ PDF fetched successfully");
+      } catch (error) {
+        console.error("❌ Failed to fetch PDF, falling back to URL:", error);
+        setPdfBlobUrl(report.url);
+      }
+    }
+  };
+
+  const closeReport = () => {
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+      setPdfBlobUrl(null);
+    }
+    setSelectedReport(null);
+    setTextContent(null);
+  };
+
+  // Helper handling download forcefully if needed inside modal
+  const downloadReport = (report) => {
+    const link = document.createElement("a");
+    link.href = report.url;
+    link.download = report.name;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="h-full md:p-8" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
@@ -172,14 +245,12 @@ export default function PatientsPage() {
                           <p className="text-xs" style={{ color: 'var(--secondary-color)' }}>{report.date}</p>
                         </div>
                       </div>
-                      <a
-                        href={report.url}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        onClick={() => openReport(report)}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                       >
                         View
-                      </a>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -227,6 +298,112 @@ export default function PatientsPage() {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {/* Report Viewer Modal */}
+      {selectedReport && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--card-bg)] rounded-lg max-w-6xl max-h-[90vh] w-full overflow-hidden border border-[var(--border-color)] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-[var(--border-color)] bg-[var(--bg-color)]">
+              <h3 className="text-lg font-semibold text-[var(--text-color)]">
+                {selectedReport.name}
+              </h3>
+              <div className="flex space-x-2">
+                <button
+                  onClick={closeReport}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <FaTimes className="text-lg" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 flex-1 overflow-auto bg-[var(--bg-color)] flex items-center justify-center">
+              {/* Added dedicated block for text/plain */}
+              {selectedReport.type === 'text/plain' ? (
+                <div className="w-full h-[70vh] border rounded-lg bg-gray-50 p-4 overflow-auto">
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-[var(--text-color)]">
+                    {textContent || "Loading text content..."}
+                  </pre>
+                </div>
+              ) : selectedReport.type.startsWith("image/") ? (
+                <img
+                  src={selectedReport.url}
+                  alt={selectedReport.name}
+                  className="max-w-full max-h-[70vh] rounded-lg"
+                />
+              ) : isPDF(selectedReport.type) ? (
+                <div className="w-full h-[70vh] flex flex-col">
+                  {!pdfBlobUrl ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
+                        <p className="text-[var(--secondary-color)]">Loading PDF...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <object
+                        data={pdfBlobUrl}
+                        type="application/pdf"
+                        className="w-full flex-1 border-0 rounded-lg"
+                      >
+                        <div className="flex flex-col items-center justify-center h-full text-[var(--secondary-color)]">
+                          <p className="mb-4">Unable to display PDF directly.</p>
+                          <button
+                            onClick={() => downloadReport(selectedReport)}
+                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm"
+                          >
+                            Download PDF to View
+                          </button>
+                        </div>
+                      </object>
+                      {/* <div className="mt-4 text-center">
+                        <button
+                          onClick={() => downloadReport(selectedReport)}
+                          className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white text-sm transition-colors flex items-center gap-2 mx-auto shadow-lg hover:shadow-green-500/50"
+                        >
+                          <FaDownload className="text-sm" />
+                          Download PDF
+                        </button>
+                      </div> */}
+                    </>
+                  )}
+                </div>
+              ) : isDoc(selectedReport.type) ? (
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(
+                    selectedReport.url
+                  )}&embedded=true`}
+                  title={selectedReport.name}
+                  className="w-full h-[70vh] border-0 rounded-lg"
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">📄</div>
+                  <p className="text-[var(--secondary-color)] mb-2 text-lg">
+                    {selectedReport.name}
+                  </p>
+                  <p className="text-[var(--secondary-color)] text-sm mb-4">
+                    This file type cannot be previewed directly.
+                  </p>
+                  <button
+                    onClick={() => downloadReport(selectedReport)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white flex items-center gap-2 mx-auto"
+                  >
+                    <FaDownload />
+                    Download File
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-[var(--border-color)] text-sm text-[var(--secondary-color)] grid grid-cols-1 md:grid-cols-3 gap-2 bg-[var(--card-bg)]">
+              <p><span className="text-[var(--secondary-color)]">Date:</span> {selectedReport.date}</p>
+              <p><span className="text-[var(--secondary-color)]">Type:</span> {selectedReport.type}</p>
+            </div>
+          </div>
         </div>
       )}
     </div>

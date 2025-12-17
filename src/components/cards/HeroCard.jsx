@@ -50,7 +50,9 @@ const HeroCard = () => {
                         </button>
 
                         <button
-                            onClick={() => navigate("/register")}
+                            // onClick={() => navigate("/register")}
+                            onClick={() => document.getElementById('get-started').scrollIntoView({ behavior: 'smooth' })}
+
                             className="group bg-[var(--card-bg)]/80 hover:bg-[var(--card-bg)] backdrop-blur-sm text-[var(--text-color)] font-semibold py-4 px-8 rounded-lg text-lg border border-[var(--border-color)] hover:border-[var(--secondary-color)] flex items-center justify-center gap-3 transition-all shadow-sm hover:shadow-md">
                             <Smartphone className="w-5 h-5 text-[var(--text-color)]" />
                             Book Appointment as Patient

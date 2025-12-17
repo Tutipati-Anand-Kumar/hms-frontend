@@ -21,6 +21,8 @@ const UpdateDoctorProfile = () => {
   const [experienceStart, setExperienceStart] = useState("");
   const [qualifications, setQualifications] = useState("");
   const [profilePic, setProfilePic] = useState("");
+  const [signature, setSignature] = useState("");
+  const [signatureSource, setSignatureSource] = useState("url"); // 'url' or 'upload'
   const [imageSource, setImageSource] = useState("url"); // 'url' or 'upload'
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,14 @@ const UpdateDoctorProfile = () => {
   const [breakStart, setBreakStart] = useState("");
   const [breakEnd, setBreakEnd] = useState("");
   const [is24Hour, setIs24Hour] = useState(false);
+
+  // File Size States
+  const [profilePicSize, setProfilePicSize] = useState(null);
+  const [signatureSize, setSignatureSize] = useState(null);
+
+  // Signature Cropper State
+  const [tempSignatureImg, setTempSignatureImg] = useState(null);
+  const [showSignatureCropper, setShowSignatureCropper] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -70,6 +80,7 @@ const UpdateDoctorProfile = () => {
         setQualifications(Array.isArray(res.qualifications) ? res.qualifications.join(", ") : "");
         setExperienceStart(res.experienceStart ? new Date(res.experienceStart).toISOString().slice(0, 10) : "");
         setProfilePic(res.profilePic || "");
+        setSignature(res.signature || "");
       } catch (err) {
         console.error(err);
         toast.error("Failed to load profile");
@@ -106,6 +117,7 @@ const UpdateDoctorProfile = () => {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setProfilePicSize((file.size / 1024).toFixed(2));
       const previewUrl = URL.createObjectURL(file);
       setTempImg(previewUrl);
       setShowCropper(true);
@@ -121,43 +133,28 @@ const UpdateDoctorProfile = () => {
       if (canvas) {
         canvas.toBlob(async (blob) => {
           if (blob) {
-            console.log("DEBUG: Blob created", blob);
-            console.log("DEBUG: Blob size", blob.size);
 
-            // Upload the cropped blob immediately to maintain compatibility with existing profilePic URL logic
+            // Upload the cropped blob immediately
             const formData = new FormData();
             formData.append("photo", blob, "cropped-profile.jpg");
 
-            // Log FormData keys to verify
-            for (let pair of formData.entries()) {
-              console.log("DEBUG: FormData Entry:", pair[0], pair[1]);
-            }
-
             setUploading(true);
             try {
-              console.log("DEBUG: Importing API...");
               const { API } = await import("../../../api/authservices/authservice");
-              console.log("DEBUG: Sending request...");
               const res = await API.post("/doctors/upload-photo", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
               });
 
-              console.log("DEBUG: Response received", res);
-              console.log("DEBUG: Response Data", res.data);
-
               if (res.data && res.data.url) {
                 setProfilePic(res.data.url);
+                setProfilePicSize((blob.size / 1024).toFixed(2));
                 toast.success("Crop saved & Uploaded ✅");
                 setShowCropper(false);
               } else {
-                console.error("DEBUG: No URL in response data");
                 toast.error("Upload successful but no URL returned");
               }
             } catch (err) {
               console.error("DEBUG: Upload Error", err);
-              if (err.response) {
-                console.error("DEBUG: Error Response Data", err.response.data);
-              }
               toast.error("Upload failed");
             } finally {
               setUploading(false);
@@ -172,6 +169,54 @@ const UpdateDoctorProfile = () => {
       }
     } else {
       console.error("DEBUG: Cropper ref is null");
+    }
+  };
+
+  const handleSignatureFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSignatureSize((file.size / 1024).toFixed(2)); // KB
+      const previewUrl = URL.createObjectURL(file);
+      setTempSignatureImg(previewUrl);
+      setShowSignatureCropper(true);
+      e.target.value = null;
+    }
+  };
+
+  const handleSignatureCropSave = async () => {
+    if (cropperRef.current) {
+      const canvas = cropperRef.current.getCanvas();
+      if (!canvas) return;
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+
+        // Check Size Limit (2MB)
+        if (blob.size > 2 * 1024 * 1024) {
+          toast.error(`Signature too large (${(blob.size / 1024 / 1024).toFixed(2)}MB). Max 2MB.`);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("photo", blob);
+
+        setUploading(true);
+        try {
+          const { API } = await import("../../../api/authservices/authservice");
+          const res = await API.post("/doctors/upload-photo", formData, {
+            headers: { "Content-Type": "multipart/form-data" }
+          });
+          setSignature(res.data.url);
+          setSignatureSize((blob.size / 1024).toFixed(2));
+          setShowSignatureCropper(false);
+          toast.success("Signature uploaded!");
+        } catch (err) {
+          console.error(err);
+          toast.error("Upload failed");
+        } finally {
+          setUploading(false);
+        }
+      }, 'image/png');
     }
   };
 
@@ -268,6 +313,7 @@ const UpdateDoctorProfile = () => {
         qualifications: qualifications.split(",").map(q => q.trim()).filter(Boolean),
         experienceStart: experienceStart ? new Date(experienceStart).toISOString() : null,
         profilePic,
+        signature,
         bio: form.bio,
         // Hospital specific updates
         hospitalId: form.hospitalId,
@@ -276,12 +322,6 @@ const UpdateDoctorProfile = () => {
         // Sanitize quickNotes: ensure they have text
         quickNotes: form.quickNotes.filter(n => n.text && n.text.trim() !== "")
       };
-
-      console.log("PAYLOAD DEBUG:", {
-        fee: form.consultationFee,
-        hospitalId: form.hospitalId,
-        fullPayload: payload
-      });
 
       await updateMyProfile(payload);
       toast.success("Profile updated");
@@ -369,10 +409,15 @@ const UpdateDoctorProfile = () => {
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={handleFileSelect}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) setProfilePicSize((file.size / 1024).toFixed(2));
+                        handleFileSelect(e);
+                      }}
                       className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
                       style={{ color: 'var(--text-color)' }}
                     />
+                    {profilePicSize && <p className="text-xs mt-1 text-gray-500">Current Size: <span className={profilePicSize > 50 ? "text-red-500 font-bold" : "text-green-500"}>{profilePicSize} KB</span></p>}
                     {uploading && <p className="text-blue-400 text-xs mt-2 flex items-center gap-1"><Clock size={12} className="animate-spin" /> Uploading...</p>}
                   </div>
                 )}
@@ -382,6 +427,69 @@ const UpdateDoctorProfile = () => {
                   <div className="mt-4 flex flex-col items-center">
                     <p className="text-xs mb-2" style={{ color: 'var(--secondary-color)' }}>Preview</p>
                     <img src={profilePic} alt="Preview" className="w-32 h-32 rounded-full object-cover border-4 border-blue-500 shadow-lg" />
+                  </div>
+                )}
+              </div>
+
+              {/* Signature Section */}
+              <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)' }}>
+                <label className="block text-sm mb-3 font-medium" style={{ color: 'var(--secondary-color)' }}>Signature</label>
+
+                <div className="flex gap-4 mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="signatureSource"
+                      value="url"
+                      checked={signatureSource === "url"}
+                      onChange={() => setSignatureSource("url")}
+                      className="text-blue-600 focus:ring-blue-500"
+                      style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
+                    />
+                    <span className="text-sm transition-colors flex items-center gap-1" style={{ color: 'var(--text-color)' }}><LinkIcon size={14} /> Image URL</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="signatureSource"
+                      value="upload"
+                      checked={signatureSource === "upload"}
+                      onChange={() => setSignatureSource("upload")}
+                      className="text-blue-600 focus:ring-blue-500"
+                      style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
+                    />
+                    <span className="text-sm transition-colors flex items-center gap-1" style={{ color: 'var(--text-color)' }}><Upload size={14} /> Upload Photo</span>
+                  </label>
+                </div>
+
+                {signatureSource === "url" ? (
+                  <input
+                    type="text"
+                    value={signature}
+                    onChange={(e) => setSignature(e.target.value)}
+                    placeholder="https://example.com/signature.png"
+                    className="w-full p-3 rounded-lg text-sm outline-none transition-colors"
+                    style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}
+                  />
+                ) : (
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSignatureFileSelect}
+                      className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
+                      style={{ color: 'var(--text-color)' }}
+                    />
+                    {signatureSize && <p className="text-xs mt-1 text-gray-500">Current Size: <span className={signatureSize > 2048 ? "text-red-500 font-bold" : "text-green-500"}>{signatureSize} KB</span> {signatureSize > 2048 && "(High)"}</p>}
+                    {uploading && <p className="text-blue-400 text-xs mt-2 flex items-center gap-1"><Clock size={12} className="animate-spin" /> Uploading...</p>}
+                  </div>
+                )}
+
+                {/* Signature Preview */}
+                {signature && (
+                  <div className="mt-4 flex flex-col items-center">
+                    <p className="text-xs mb-2" style={{ color: 'var(--secondary-color)' }}>Preview</p>
+                    <img src={signature} alt="Signature Preview" className="h-16 object-contain border border-gray-300 p-2 bg-white rounded" />
                   </div>
                 )}
               </div>
@@ -632,7 +740,7 @@ const UpdateDoctorProfile = () => {
       </div>
 
 
-      {/* 👇 FULLSCREEN CROP MODAL */}
+      {/* 👇 FULLSCREEN CROP MODAL for Profile Pic */}
       {
         showCropper && (
           <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-3xl bg-transparent">
@@ -673,6 +781,40 @@ const UpdateDoctorProfile = () => {
           </div>
         )
       }
+
+      {/* 👇 Signature Crop Modal */}
+      {showSignatureCropper && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
+          <div className="bg-white p-6 rounded-lg w-full max-w-lg shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold mb-4 text-gray-800">Crop Signature</h3>
+            <p className="text-xs text-gray-500 mb-2">Adjust to select just the signature.</p>
+            <div className="h-64 bg-gray-100 rounded overflow-hidden">
+              <Cropper
+                ref={cropperRef}
+                src={tempSignatureImg}
+                className={'cropper'}
+                stencilProps={{
+                  aspectRatio: 3 / 1,
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowSignatureCropper(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSignatureCropSave}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors"
+              >
+                Save Signature
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };

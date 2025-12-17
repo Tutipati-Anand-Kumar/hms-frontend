@@ -17,6 +17,7 @@ const MedicalRecords = () => {
   const [patientId, setPatientId] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null); // Store PDF blob URL
+  const [textContent, setTextContent] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     title: "",
@@ -54,7 +55,8 @@ const MedicalRecords = () => {
           date: report.date,
           patientId: report.patient,
           size: report.size,
-          uploadDate: report.createdAt
+          uploadDate: report.createdAt,
+          signedUrl: report.signedUrl // Pass signed URL to frontend
         });
         return acc;
       }, {});
@@ -139,8 +141,46 @@ const MedicalRecords = () => {
     console.log("📂 Opening Report:", report);
     setSelectedReport(report);
 
-    // If it's a PDF, fetch it with auth headers
+    // Reset specific states
+    setPdfBlobUrl(null);
+    setTextContent(null);
+
+    // If it's a text file, fetch content directly
+    if (report.type === 'text/plain') {
+      console.log("📄 Fetching Text Content...");
+      fetch(report.signedUrl || report.data)
+        .then(res => res.text())
+        .then(text => setTextContent(text))
+        .catch(err => console.error("❌ Text fetch failed:", err));
+      return;
+    }
+
+    // If it's a PDF, fetch it with auth headers OR use signed URL
     if (isPDF(report.type)) {
+      if (report.signedUrl) {
+        console.log("✅ Using Pre-Signed URL for PDF");
+        console.log("   - Name:", report.name);
+        console.log("   - URL:", report.signedUrl);
+
+        // Fetch as blob to force inline display (prevents auto-download of raw files)
+        try {
+          const resp = await fetch(report.signedUrl);
+          console.log("✅ PDF fetched successfully with auth");
+          if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
+          const blob = await resp.blob();
+          console.log("✅ Blob fetched successfully");
+          // Force PDF type to ensure browser viewing instead of downloading
+          const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+
+          const blobUrl = URL.createObjectURL(pdfBlob);
+          setPdfBlobUrl(blobUrl);
+        } catch (e) {
+          console.error("Blob fetch failed, falling back to direct URL:", e);
+          setPdfBlobUrl(report.signedUrl); // Fallback to direct link
+        }
+        return;
+      }
+
       try {
         console.log("🔐 Fetching PDF with authentication...");
 
@@ -243,12 +283,11 @@ const MedicalRecords = () => {
         type={confirmModal.type}
       />
       <h1 className="text-2xl max-sm:text-[18px] font-bold mb-2">Medical Records</h1>
-      <p className="text-[var(--secondary-color)] mb-6">Patient ID: {patientId}</p>
+      {/* <p className="text-[var(--secondary-color)] mb-6">Patient ID: {patientId}</p> */}
 
       {/* Combined Date Selector and Upload Box */}
-      <div className="bg-[var(--card-bg)] p-6 rounded-lg mb-8 border border-[var(--border-color)]">
+      {/* <div className="bg-[var(--card-bg)] p-6 rounded-lg mb-8 border border-[var(--border-color)]">
         <div className="flex flex-row  max-lg:flex-col items-center justify-between gap-6">
-          {/* Date Selector */}
           <div
             className="flex-1 bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl p-4 cursor-pointer hover:border-blue-500 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/10 group"
             onClick={() => document.getElementById("date-input").showPicker()}
@@ -284,8 +323,6 @@ const MedicalRecords = () => {
               </div>
             </div>
           </div>
-
-          {/* Upload Box */}
           <div
             className="flex-1 bg-[var(--bg-color)] border-2 border-dashed border-[var(--border-color)] rounded-xl p-4 cursor-pointer hover:border-green-500 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/10 group"
             onDrop={handleDrop}
@@ -298,7 +335,7 @@ const MedicalRecords = () => {
               onChange={handleUpload}
               className="hidden"
               id="file-upload"
-              accept=".png,.jpg,.jpeg,.pdf,.doc,.docx,.txt"
+              accept=".png,.jpg,.jpeg,.doc,.docx,.txt"
               disabled={isUploading}
             />
 
@@ -341,7 +378,7 @@ const MedicalRecords = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Display Reports */}
       <div className="mt-8">
@@ -349,11 +386,11 @@ const MedicalRecords = () => {
           <div className="text-center py-12">
             <div className="text-6xl mb-4 text-gray-600">📁</div>
             <p className="text-gray-400 text-xl">
-              No medical reports uploaded yet.
+              No medical reports from Doctors.
             </p>
-            <p className="text-gray-500 mt-2">
+            {/* <p className="text-gray-500 mt-2">
               Select a date and upload your first report above.
-            </p>
+            </p> */}
           </div>
         ) : (
           Object.keys(reports)
@@ -382,7 +419,7 @@ const MedicalRecords = () => {
                           onClick={() => openReport(report)}
                         >
                           <img
-                            src={report.data}
+                            src={report.signedUrl || report.data}
                             alt={report.name}
                             className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
                           />
@@ -396,6 +433,7 @@ const MedicalRecords = () => {
                             📕
                           </div>
                           <p className="text-sm truncate px-2">{report.name}</p>
+                          {console.log(report)}
                           <p className="text-xs text-blue-400 mt-2">
                             Click to view PDF
                           </p>
@@ -421,7 +459,7 @@ const MedicalRecords = () => {
                         </p>
                         <div className="flex space-x-2">
 
-                          <button
+                          {/* <button
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteReport(date, report.id);
@@ -430,7 +468,7 @@ const MedicalRecords = () => {
                             title="Delete report"
                           >
                             <FaTimes className="text-sm" />
-                          </button>
+                          </button> */}
                         </div>
                       </div>
                     </div>
@@ -462,7 +500,7 @@ const MedicalRecords = () => {
             <div className="p-4 flex-1 overflow-auto bg-[var(--bg-color)] flex items-center justify-center">
               {selectedReport.type.startsWith("image/") ? (
                 <img
-                  src={selectedReport.data}
+                  src={selectedReport.signedUrl || selectedReport.data}
                   alt={selectedReport.name}
                   className="max-w-full max-h-[70vh] rounded-lg"
                 />
@@ -502,7 +540,7 @@ const MedicalRecords = () => {
                       </object>
 
                       {/* Download Button Below Preview */}
-                      <div className="mt-4 text-center">
+                      {/* <div className="mt-4 text-center">
                         <button
                           onClick={() => {
                             console.log("📥 Downloading PDF:", selectedReport.name);
@@ -513,16 +551,30 @@ const MedicalRecords = () => {
                           <FaDownload className="text-sm" />
                           Download PDF
                         </button>
-                      </div>
+                      </div> */}
                     </>
                   )}
                 </div>
+              ) : selectedReport.type === 'text/plain' ? (
+                <div className="w-full h-[70vh] border rounded-lg bg-gray-50 p-4 overflow-auto">
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-[var(--text-color)]">
+                    {textContent || "Loading text content..."}
+                  </pre>
+                </div>
               ) : isDoc(selectedReport.type) ? (
-                <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(selectedReport.data)}&embedded=true`}
-                  title={selectedReport.name}
-                  className="w-full h-[70vh] border-0 rounded-lg"
-                />
+                (() => {
+                  const docUrl = selectedReport.signedUrl || selectedReport.data;
+                  console.log("📄 Opening Doc/Text:", selectedReport.name);
+                  console.log("   - Type:", selectedReport.type);
+                  console.log("   - URL:", docUrl);
+                  return (
+                    <iframe
+                      src={`https://docs.google.com/gview?url=${encodeURIComponent(docUrl)}&embedded=true`}
+                      title={selectedReport.name}
+                      className="w-full h-[70vh] border-0 rounded-lg"
+                    />
+                  );
+                })()
               ) : (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">📄</div>

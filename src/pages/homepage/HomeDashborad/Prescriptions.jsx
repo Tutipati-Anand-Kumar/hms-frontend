@@ -155,7 +155,7 @@ const Prescriptions = () => {
 
           <div className="flex items-center gap-3">
             {/* Select All Button */}
-            {filteredPrescriptions.length > 0 && (
+            {/* {filteredPrescriptions.length > 0 && (
               <button
                 onClick={handleSelectAll}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--card-bg)] text-[var(--secondary-color)] hover:text-[var(--text-color)] hover:border-blue-500 transition-all text-sm font-medium"
@@ -163,10 +163,10 @@ const Prescriptions = () => {
                 {allSelected ? <CheckSquare size={18} className="text-blue-500" /> : <Square size={18} />}
                 {allSelected ? "Deselect All" : "Select All"}
               </button>
-            )}
+            )} */}
 
             {/* Batch Delete Button */}
-            {showBatchDelete && (
+            {/* {showBatchDelete && (
               <button
                 onClick={initiateBatchDelete}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-all text-sm font-bold shadow-lg shadow-red-500/20 animate-fade-in"
@@ -174,7 +174,7 @@ const Prescriptions = () => {
                 <Trash2 size={18} />
                 Delete ({selectedIds.length})
               </button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -196,21 +196,21 @@ const Prescriptions = () => {
                   className={`group bg-[var(--card-bg)] p-5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-full relative ${isSelected ? 'border-blue-500 ring-1 ring-blue-500 shadow-md shadow-blue-500/10' : 'border-[var(--border-color)] hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10'}`}
                 >
                   {/* Checkbox (Top Left) */}
-                  <div
+                  {/* <div
                     onClick={(e) => toggleSelection(pres._id, e)}
                     className="absolute top-4 left-4 z-20 text-[var(--secondary-color)] hover:text-blue-500 cursor-pointer p-1 -ml-1 -mt-1"
                   >
                     {isSelected ? <CheckSquare size={20} className="text-blue-500 fill-blue-500/10" /> : <Square size={20} />}
-                  </div>
+                  </div> */}
 
                   {/* Single Delete Button (Top Right) */}
-                  <button
+                  {/* <button
                     onClick={(e) => initiateDelete(pres._id, e)}
                     className="absolute top-4 right-4 p-2 text-red-400 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
                     title="Delete Prescription"
                   >
                     <Trash2 size={18} />
-                  </button>
+                  </button> */}
 
                   <div className="mt-8"> {/* Added margin top to clear checkbox */}
                     <div className="flex items-center gap-3 mb-4">

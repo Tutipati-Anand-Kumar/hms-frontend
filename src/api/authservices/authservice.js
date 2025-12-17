@@ -23,6 +23,8 @@ export const setAuthTokens = (userId, tokens) => {
 
   sessionStorage.setItem("hms_current_user", userId); // Session specific active user
   localStorage.setItem("hms_current_user", userId);   // Persist active user
+
+  window.dispatchEvent(new Event("hms_login"));
 };
 
 // Get tokens of currently active user
@@ -56,6 +58,7 @@ export const getAuthTokens = () => {
 export const clearAuthTokens = (userId) => {
   sessionStorage.removeItem(`hms_auth_tokens_${userId}`);
   localStorage.removeItem(`hms_auth_tokens_${userId}`);
+  window.dispatchEvent(new Event("hms_logout"));
 };
 
 export const getActiveUser = () => {
@@ -248,6 +251,7 @@ export const logoutUser = async (userId) => {
       localStorage.removeItem(key);
     }
   });
+  window.dispatchEvent(new Event("hms_logout"));
 };
 
 export const getCurrentUser = async () => {

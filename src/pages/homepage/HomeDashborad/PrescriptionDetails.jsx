@@ -82,9 +82,9 @@ const PrescriptionDetails = () => {
                                     <Calendar size={14} />
                                     <span className="text-sm">{new Date(prescription.date || prescription.createdAt).toLocaleDateString()}</span>
                                 </div>
-                                <div className="mt-1 text-xs text-[var(--secondary-color)]">
+                                {/* <div className="mt-1 text-xs text-[var(--secondary-color)]">
                                     ID: {prescription._id}
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                     </div>

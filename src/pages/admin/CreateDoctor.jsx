@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import { createDoctor, listHospitals } from "../../api/admin/adminServices";
 import { createDoctorByHelpdesk, getHelpDeskMe } from "../../api/helpdesk/helpdeskService";
 import { getActiveUser } from "../../api/authservices/authservice";
@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 
 const CreateDoctor = () => {
     const outletContext = useOutletContext();
+    const navigate = useNavigate();
     const setSearchPlaceholder = outletContext?.setSearchPlaceholder;
 
     const [hospitals, setHospitals] = useState([]);
@@ -106,6 +107,12 @@ const CreateDoctor = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (userRole === "helpdesk") {
+            toast.error("You don’t have access to add doctor Please Rise Ticket.");
+            navigate("/helpdesk/support/create");
+            return;
+        }
 
         if (formData.mobile.length !== 10) {
             toast.error("Mobile number must be exactly 10 digits.");

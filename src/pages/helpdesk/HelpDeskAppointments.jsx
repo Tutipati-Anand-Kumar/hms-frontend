@@ -271,7 +271,7 @@ const HelpDeskAppointments = () => {
             {/* REJECT MODAL */}
             {
                 showRejectModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-[var(--card-bg)] p-6 rounded-lg shadow-xl w-96 border border-[var(--border-color)]">
                             <h3 className="text-xl font-bold mb-4">Reject Appointment</h3>
                             <p className="mb-2 text-[var(--secondary-color)]">

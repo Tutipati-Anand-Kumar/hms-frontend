@@ -22,6 +22,8 @@ export default function Prescription() {
                 const res = await API.get('/doctors/profile/me');
                 if (res.data) {
                     setDoctorDetails(res.data);
+                    if (res.data.signature) setSignature(res.data.signature);
+
                     // If hospital is not in appointment, try to get from doctor's profile
                     if (!appointment?.hospital && res.data.hospitals && res.data.hospitals.length > 0) {
                         // res.data.hospitals is array of {hospital: {...}, ...} - assuming populated? 
@@ -50,8 +52,7 @@ export default function Prescription() {
     const [patientDetails, setPatientDetails] = useState(appointment?.patient || null);
     const [loading, setLoading] = useState(false);
     const [uploadingPDF, setUploadingPDF] = useState(false); // Track PDF upload state
-    const [signature, setSignature] = useState(null); // Base64 string
-    const [doctorSignatureText, setDoctorSignatureText] = useState(""); // Text signature
+    const [signature, setSignature] = useState(null); // URL from profile
 
     // Mode: 'ai' or 'self'
     const [prescriptionMode, setPrescriptionMode] = useState('ai');
@@ -111,6 +112,10 @@ export default function Prescription() {
     };
 
     const cardRef = useRef(null);
+
+    // AI Verification State
+    const [verificationShown, setVerificationShown] = useState(false);
+    const [aiVerified, setAiVerified] = useState(false);
 
     // --- PERSISTENCE ---
     useEffect(() => {
@@ -241,16 +246,7 @@ export default function Prescription() {
         // The useEffect above will handle updating details
     };
 
-    const handleSignatureUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setSignature(reader.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+
 
     const handleAISearch = async () => {
         if (!currentData.symptoms) {
@@ -373,7 +369,7 @@ export default function Prescription() {
                 doctorSpecialization: doctorDetails?.specialties?.[0] || doctorDetails?.specialization || "",
 
                 doctorSig: signature,
-                doctorSigText: doctorSignatureText,
+                doctorSigText: null,
                 qrCodeUrl: null,
                 showVitals: showVitals
             };
@@ -386,6 +382,19 @@ export default function Prescription() {
             tempDiv.style.position = 'absolute';
             tempDiv.style.left = '-9999px';
             document.body.appendChild(tempDiv);
+
+            // FORCE IMAGE LOAD: Wait for all images in the tempDiv to load
+            const images = tempDiv.getElementsByTagName('img');
+            const imagePromises = Array.from(images).map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Continue even if error
+                });
+            });
+            await Promise.all(imagePromises);
+            // Extra small delay for rendering
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // COMPRESSION FIX: Reduce scale from 2 to 1 (reduces size by ~75%)
             const canvas = await html2canvas(tempDiv, {
@@ -426,7 +435,8 @@ export default function Prescription() {
                 public_id: uploadRes.data.file.public_id,
                 date: new Date().toISOString().split('T')[0], // Today's date
                 size: uploadRes.data.file.size,
-                appointmentId: appointment?._id
+                appointmentId: appointment?._id,
+                hospitalId: hospitalDetails?._id || (typeof appointment?.hospital === 'string' ? appointment.hospital : appointment?.hospital?._id)
             });
 
             // 4. Update Appointment Status to COMPLETED
@@ -448,6 +458,149 @@ export default function Prescription() {
             toast.error("Failed to generate or upload PDF", { id: toastId });
         } finally {
             setUploadingPDF(false); // Reset loading state
+        }
+    };
+
+    const handlePrintAndSave = async () => {
+        // AI Verification Logic
+        if (prescriptionMode === 'ai') {
+            if (!verificationShown) {
+                setVerificationShown(true);
+                // Scroll to bottom to show the message
+                setTimeout(() => {
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                }, 100);
+                return;
+            }
+            // No Checkbox verification needed anymore
+        }
+
+        // Proceed to generate PDF and Save (Reuse existing logic but modify end step)
+        // Prevent double-click
+        if (uploadingPDF) {
+            toast.error("Process already in progress...");
+            return;
+        }
+
+        const savedData = await handleSave();
+        if (!savedData) return;
+
+        setUploadingPDF(true);
+        const toastId = toast.loading("Saving and preparing print...");
+
+        try {
+            const templateData = {
+                hospitalName: hospitalDetails?.name || "",
+                hospitalAddress: hospitalDetails?.address || "",
+                hospitalPhone: hospitalDetails?.phone || "",
+                hospitalEmail: hospitalDetails?.email || "",
+                patientName: patientName,
+                age: patientDetails?.age || "",
+                gender: patientDetails?.gender || "",
+                // Use currentData for vitals as they might be edited
+                weight: currentData.weight || patientDetails?.weight || "",
+                height: currentData.height || patientDetails?.height || "",
+                date: new Date().toLocaleDateString(),
+                mrn: patientDetails?.mrn || appointment?.mrn || "",
+                symptoms: currentData.symptoms,
+                diagnosis: currentData.reason,
+                medicines: currentData.medicines.filter(m => m.trim() !== ""),
+                dietAdvice: currentData.diet_advice.filter(d => d.trim() !== ""),
+                tests: currentData.suggested_tests.filter(t => t.trim() !== ""),
+                followUp: currentData.follow_up,
+                avoid: currentData.avoid,
+
+                // Dynamic Doctor Details from Profile
+                doctorName: doctorDetails?.user?.name || doctorDetails?.name || appointment?.doctor?.name || "",
+                doctorQual: doctorDetails?.qualifications?.join(', ') || "",
+                doctorSpecialization: doctorDetails?.specialties?.[0] || doctorDetails?.specialization || "",
+
+                doctorSig: signature,
+                doctorSigText: null,
+                qrCodeUrl: null,
+                showVitals: showVitals
+            };
+
+            const cleanHtml = getPrescriptionTemplate(templateData);
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cleanHtml;
+            tempDiv.style.width = '800px';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            document.body.appendChild(tempDiv);
+
+            // FORCE IMAGE LOAD
+            const images = tempDiv.getElementsByTagName('img');
+            const imagePromises = Array.from(images).map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Continue even if error
+                });
+            });
+            await Promise.all(imagePromises);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const canvas = await html2canvas(tempDiv, {
+                scale: 1,
+                useCORS: true,
+                logging: false
+            });
+            document.body.removeChild(tempDiv);
+
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, imgWidth, imgHeight);
+
+            // 1. Convert PDF to Base64
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            const pdfBlob = pdf.output('blob');
+            const fileName = `${patientName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+
+            // 2. Upload to Cloudinary via Backend
+            const uploadRes = await API.post("/prescriptions/upload-pdf-buffer", {
+                pdfBuffer: pdfBase64,
+                fileName: fileName,
+                patientId: selectedPatientId,
+                appointmentId: appointment?._id
+            });
+
+            // 3. Save Metadata to Medical Records
+            await API.post("/reports/save", {
+                patientId: selectedPatientId,
+                name: fileName,
+                url: uploadRes.data.file.url,
+                type: "application/pdf",
+                public_id: uploadRes.data.file.public_id,
+                date: new Date().toISOString().split('T')[0], // Today's date
+                size: uploadRes.data.file.size,
+                appointmentId: appointment?._id,
+                hospitalId: hospitalDetails?._id || (typeof appointment?.hospital === 'string' ? appointment.hospital : appointment?.hospital?._id)
+            });
+
+            // 4. Update Appointment Status to COMPLETED
+            if (appointment && appointment._id) {
+                await API.put(`/bookings/status/${appointment._id}`, {
+                    status: 'completed',
+                    reason: 'Prescription generated'
+                });
+            }
+
+            toast.success("Saved to Patient's Medical Records", { id: toastId });
+
+            // PRINT INSTEAD OF DOWNLOAD
+            // pdf.save(fileName); // Disabled
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank'); // Opens in new tab, user can print from there
+
+        } catch (error) {
+            console.error("PDF/Upload Error:", error);
+            toast.error("Failed to generate or upload PDF", { id: toastId });
+        } finally {
+            setUploadingPDF(false);
         }
     };
 
@@ -864,26 +1017,28 @@ export default function Prescription() {
                                 </div>
                             </div>
 
-                            {/* Signatures */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-gray-100">
-                                <div>
-                                    <label className="block text-sm font-semibold mb-2 text-gray-500">Upload Signature (Image)</label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleSignatureUpload}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                    />
+                            {/* Visible Signature Preview + AI Warning */}
+                            <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
+                                {/* Left Side: AI Warning Message */}
+                                <div className="flex-1 pr-8">
+                                    {prescriptionMode === 'ai' && verificationShown && (
+                                        <p className="text-sm text-red-600 font-medium animate-in fade-in slide-in-from-left duration-500">
+                                            The above medicines are AI-generated prescriptions. Please verify the medicines 2–3 times.
+                                        </p>
+                                    )}
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold mb-2 text-gray-500">or Type Signature</label>
-                                    <input
-                                        className="w-full p-2 rounded border focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                        style={{ fontFamily: 'Brush Script MT, cursive', fontSize: '1.2rem' }}
-                                        placeholder="Type name to sign..."
-                                        value={doctorSignatureText}
-                                        onChange={(e) => setDoctorSignatureText(e.target.value)}
-                                    />
+
+                                {/* Right Side: Signature */}
+                                <div className="text-center">
+                                    <div className="h-16 flex items-center justify-center mb-2">
+                                        {signature ? (
+                                            <img src={signature} alt="Sign" className="h-full object-contain" />
+                                        ) : (
+                                            <span className="text-gray-400 italic text-sm">No signature available</span>
+                                        )}
+                                    </div>
+                                    <div className="border-t border-gray-300 w-48 mx-auto"></div>
+                                    <span className="text-xs text-gray-500 font-medium">Doctor's Signature</span>
                                 </div>
                             </div>
                         </div>
@@ -894,11 +1049,11 @@ export default function Prescription() {
                 <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 pb-12 px-4">
 
                     <button
-                        onClick={handleDownload}
-                        disabled={uploadingPDF || !currentData.medicines || currentData.medicines.length === 0 || (!signature && !doctorSignatureText)}
+                        onClick={handlePrintAndSave}
+                        disabled={uploadingPDF || !currentData.medicines || currentData.medicines.length === 0 || !signature}
                         className="w-full sm:w-auto px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2"
                     >
-                        {uploadingPDF ? 'Generating...' : 'Save & Download'}
+                        {uploadingPDF ? 'Processing...' : 'Save & Print'}
                     </button>
                     <button
                         onClick={handleClear}

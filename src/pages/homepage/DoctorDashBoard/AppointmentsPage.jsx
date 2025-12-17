@@ -119,6 +119,8 @@ export default function AppointmentsPage() {
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
+          min={new Date().toISOString().split("T")[0]}
+          max={new Date(new Date().setDate(new Date().getDate() + 14)).toISOString().split("T")[0]}
           className="p-2 rounded border bg-[var(--bg-color)] text-[var(--text-color)] border-[var(--border-color)]"
         />
       </div>

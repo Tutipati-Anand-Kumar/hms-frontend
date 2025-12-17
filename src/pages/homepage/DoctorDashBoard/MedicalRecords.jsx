@@ -32,6 +32,9 @@ export const getPrescriptionTemplate = (data) => {
    // Note: html2canvas requires specific handling for some styles. 
    // We use standard inline styles.
 
+   // Calculate current time in 12-hour format
+   const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+
    return `
     <div style="font-family: 'Inter', system-ui, sans-serif; background: #fff; color: #0f172a; width: 800px; padding: 0; margin: 0; box-sizing: border-box; position: relative; overflow: hidden;">
       
@@ -63,12 +66,15 @@ export const getPrescriptionTemplate = (data) => {
           <div style="text-align: right; font-size: 13px; color: #374151;">
              <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                   <td style="font-weight: 600; padding-right: 8px; text-align: right; color: #0f172a;">Date:</td>
-                   <td style="text-align: left;">${date}</td>
+                   <td style="font-weight: 600; padding-right: 8px; text-align: right; color: #0f172a; vertical-align: top;">Date:</td>
+                   <td style="text-align: left; vertical-align: top;">
+                      <div style="line-height: 1.2;">${date}</div>
+                      
+                   </td>
                 </tr>
                 <tr>
-                   <td style="font-weight: 600; padding-right: 8px; text-align: right; color: #0f172a;">MRN:</td>
-                   <td style="text-align: left;">${mrn || 'N/A'}</td>
+                   <td style="font-weight: 600; padding-right: 8px; text-align: right; color: #0f172a; padding-top: 6px;">MRN:</td>
+                   <td style="text-align: left; padding-top: 6px;">${mrn || 'N/A'}</td>
                 </tr>
              </table>
           </div>
@@ -193,14 +199,10 @@ export const getPrescriptionTemplate = (data) => {
         <!-- FOOTER -->
         <div style="background: #f8fafc; border-top: 1px dashed #cbd5e1; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #64748b;">
            <div>
-              <div>Generated on: ${date}</div>
+            
               <div style="margin-top: 2px;">www.mscurechain.com</div>
            </div>
            
-            <div style="text-align: right;">
-               <div>Electronically generated prescription</div>
-               <div style="margin-top: 2px; color: #2b7bd3; font-weight: 500;">Safe & Secure</div>
-            </div>
         </div>
 
       </div>
