@@ -1,8 +1,10 @@
 import React from 'react';
 import { Heart, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { NavLink} from 'react-router-dom';
 
 const Footer = () => {
     const currentYear = new Date().getFullYear();
+    
 
     return (
         <footer
@@ -78,23 +80,14 @@ const Footer = () => {
                         <h4 className="text-lg font-semibold" style={{ color: 'var(--text-color)' }}>Quick Links</h4>
                         <ul className="space-y-2">
                             <li>
-                                <a href="#" className="text-sm hover:text-blue-400 transition-colors duration-200 flex items-center group">
-                                    <span className="w-0 group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-200 mr-0 group-hover:mr-2"></span>
-                                    About Us
-                                </a>
+                               <NavLink to="https://mstechhive.com">About Us</NavLink>
                             </li>
 
                             <li>
-                                <a href="#" className="text-sm hover:text-blue-400 transition-colors duration-200 flex items-center group">
-                                    <span className="w-0 group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-200 mr-0 group-hover:mr-2"></span>
-                                    Appointments
-                                </a>
+                               <NavLink to="/login">Appointment</NavLink>
                             </li>
                             <li>
-                                <a href="#" className="text-sm hover:text-blue-400 transition-colors duration-200 flex items-center group">
-                                    <span className="w-0 group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-200 mr-0 group-hover:mr-2"></span>
-                                    Emergency Care
-                                </a>
+                               <NavLink to="/login">Emergency Care</NavLink>
                             </li>
                         </ul>
                     </div>
@@ -104,34 +97,20 @@ const Footer = () => {
                         <h4 className="text-lg font-semibold" style={{ color: 'var(--text-color)' }}>Our Services</h4>
                         <ul className="space-y-2">
                             <li>
-                                <a href="#" className="text-sm hover:text-blue-400 transition-colors duration-200 flex items-center group">
-                                    <span className="w-0 group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-200 mr-0 group-hover:mr-2"></span>
-                                    General Medicine
-                                </a>
+                               <NavLink to="/login">Appointment Booking</NavLink>
+                            </li>   
+                           
+                            <li>
+                                <NavLink to="/login">Digital Pescriptions</NavLink>
                             </li>
                             <li>
-                                <a href="#" className="text-sm hover:text-blue-400 transition-colors duration-200 flex items-center group">
-                                    <span className="w-0 group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-200 mr-0 group-hover:mr-2"></span>
-                                    Cardiology
-                                </a>
+                                <NavLink to="/login">Real Time Notifications</NavLink>
+                            </li>
+                             <li>
+                                <NavLink to="/login">AI-Powered Symptom Checker</NavLink>
                             </li>
                             <li>
-                                <a href="#" className="text-sm hover:text-blue-400 transition-colors duration-200 flex items-center group">
-                                    <span className="w-0 group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-200 mr-0 group-hover:mr-2"></span>
-                                    Pediatrics
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="text-sm hover:text-blue-400 transition-colors duration-200 flex items-center group">
-                                    <span className="w-0 group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-200 mr-0 group-hover:mr-2"></span>
-                                    Orthopedics
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="text-sm hover:text-blue-400 transition-colors duration-200 flex items-center group">
-                                    <span className="w-0 group-hover:w-2 h-0.5 bg-blue-400 transition-all duration-200 mr-0 group-hover:mr-2"></span>
-                                    Laboratory Services
-                                </a>
+                                <NavLink to="/login">Hospital and Doctor Management</NavLink>
                             </li>
                         </ul>
                     </div>
@@ -168,7 +147,7 @@ const Footer = () => {
                         {/* Emergency Badge */}
                         <div className="mt-4 bg-red-600/20 border border-red-600/50 rounded-lg p-3">
                             <p className="text-red-400 font-semibold text-sm">24/7 Emergency</p>
-                            <p className="text-red-300 text-xs mt-1">Call: +91 9032223352</p>
+                            <p className="text-red-300 text-xs mt-1">Call: 108</p>
                         </div>
                     </div>
                 </div>

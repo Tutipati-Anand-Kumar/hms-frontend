@@ -269,26 +269,26 @@ export default function PatientsPage() {
             <table className="w-full border-collapse min-w-[600px]" style={{ color: 'var(--text-color)' }}>
               <thead>
                 <tr className="text-left" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <th className="py-2">MRN</th>
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Mobile</th>
-                  <th className="py-2">Email</th>
-                  <th className="py-2">Last Reason</th>
-                  <th className="py-2">Action</th>
+                  <th className="py-2 max-sm:text-[10px]">MRN</th>
+                  <th className="py-2 max-sm:text-[10px]">Name</th>
+                  <th className="py-2 max-sm:text-[10px]">Mobile</th>
+                  <th className="py-2 max-sm:text-[10px]">Email</th>
+                  <th className="py-2 max-sm:text-[10px]">Last Reason</th>
+                  <th className="py-2 max-sm:text-[10px]">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((p) => (
                   <tr key={p._id} className="transition-colors" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td className="py-2 font-mono text-sm text-blue-500">{p.mrn || "N/A"}</td>
-                    <td className="py-2 font-medium" style={{ color: 'var(--text-color)' }}>{p.name}</td>
-                    <td className="py-2">{p.mobile}</td>
-                    <td className="py-2">{p.email}</td>
-                    <td className="py-2" style={{ color: 'var(--secondary-color)' }}>{p.reason}</td>
-                    <td className="py-2">
+                    <td className="py-2 font-mono text-sm max-sm:text-[10px] text-blue-500">{p.mrn || "N/A"}</td>
+                    <td className="py-2 font-medium max-sm:text-[10px]" style={{ color: 'var(--text-color)' }}>{p.name}</td>
+                    <td className="py-2 max-sm:text-[10px]">{p.mobile}</td>
+                    <td className="py-2 max-sm:text-[10px]">{p.email}</td>
+                    <td className="py-2 max-sm:text-[10px]" style={{ color: 'var(--secondary-color)' }}>{p.reason}</td>
+                    <td className="py-2 max-sm:text-[10px]">
                       <button
                         onClick={() => handleViewPatient(p._id)}
-                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 max-sm:text-[10px]"
                       >
                         View
                       </button>

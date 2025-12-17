@@ -3,9 +3,10 @@ import { useNavigate, Outlet, NavLink } from "react-router-dom";
 import { logoutUser, getActiveUser } from "../../api/authservices/authservice";
 import helpdeskService from "../../api/helpdesk/helpdeskService";
 import Sidebar from "../../components/slidebar/Sidebar";
-import { Menu, Bell, Sun, Moon, User } from "lucide-react";
+import { Menu, Sun, Moon } from "lucide-react";
 import NotificationBell from "../../components/NotificationBell";
 import { getInitials, getColor } from "../../utils/avatarUtils";
+import SelectionNavbar from "../../components/navabr/SelectionNavbar";
 
 const HelpDesk = () => {
   const navigate = useNavigate();
@@ -13,6 +14,13 @@ const HelpDesk = () => {
   const [activeUser, setActiveUser] = useState(getActiveUser() || { name: "HelpDesk", role: "helpdesk" });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
+
+  // Navbar Configuration Context
+  const [navbarConfig, setNavbarConfig] = useState({
+    type: "default", // 'default' | 'selection'
+    count: 0,
+    actions: {} // { onClear, onEdit, onCopy, ... }
+  });
 
   // Fetch fresh profile data
   useEffect(() => {
@@ -79,56 +87,69 @@ const HelpDesk = () => {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      {/* Fixed Navbar */}
-      <div className="fixed top-0 left-0 right-0 h-16 bg-[var(--card-bg)] border-b border-[var(--border-color)] z-30 flex items-center justify-between px-4 lg:px-6 transition-all duration-300">
-        {/* Left: Mobile Menu & Title */}
-        <NavLink to="/helpdesk">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent lg:hidden">
-              MScurechain
-            </h1>
-          </div>
-        </NavLink>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2 sm:gap-4">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg  dark:hover:bg-gray-800 transition-colors text-[var(--text-color)]"
-          >
-            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-
-          <NotificationBell />
-
-          <div
-            className="flex items-center gap-3 cursor-pointer pl-2 sm:pl-4 sm:border-l border-[var(--border-color)]"
-            onClick={() => navigate('/helpdesk/profile')}
-          >
-            <div className={`w-9 h-9 rounded-full overflow-hidden border-2 ${activeUser.avatar ? 'border-blue-500' : 'border-transparent'}`}>
-              {activeUser.avatar && activeUser.avatar !== "/avatar.png" ? (
-                <img src={activeUser.avatar} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <div className={`w-full h-full flex items-center justify-center text-white font-bold text-xs ${getColor(activeUser.name || 'HelpDesk')}`}>
-                  {getInitials(activeUser.name || 'HelpDesk')}
-                </div>
-              )}
+      {/* Render Appropriate Navbar */}
+      {navbarConfig.type === 'selection' ? (
+        <SelectionNavbar
+          count={navbarConfig.count}
+          onClear={navbarConfig.actions.onClear}
+          onEdit={navbarConfig.actions.onEdit}
+          onCopy={navbarConfig.actions.onCopy}
+          onSelectAll={navbarConfig.actions.onSelectAll}
+          onDelete={navbarConfig.actions.onDelete}
+          canEdit={navbarConfig.actions.canEdit}
+        />
+      ) : (
+        /* Fixed Navbar (Default) */
+        <div className="fixed top-0 left-0 right-0 h-16 bg-[var(--card-bg)] border-b border-[var(--border-color)] z-30 flex items-center justify-between px-4 lg:px-6 transition-all duration-300">
+          {/* Left: Mobile Menu & Title */}
+          <NavLink to="/helpdesk">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent lg:hidden">
+                MScurechain
+              </h1>
             </div>
+          </NavLink>
 
-          </div>
-          <button
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg  dark:hover:bg-gray-800 transition-colors text-[var(--text-color)]"
+            >
+              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
+            <NotificationBell />
+
+            <div
+              className="flex items-center gap-3 cursor-pointer pl-2 sm:pl-4 sm:border-l border-[var(--border-color)]"
+              onClick={() => navigate('/helpdesk/profile')}
+            >
+              <div className={`w-9 h-9 rounded-full overflow-hidden border-2 ${activeUser.avatar ? 'border-blue-500' : 'border-transparent'}`}>
+                {activeUser.avatar && activeUser.avatar !== "/avatar.png" ? (
+                  <img src={activeUser.avatar} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className={`w-full h-full flex items-center justify-center text-white font-bold text-xs ${getColor(activeUser.name || 'HelpDesk')}`}>
+                    {getInitials(activeUser.name || 'HelpDesk')}
+                  </div>
+                )}
+              </div>
+
+            </div>
+            <button
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-2 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <Menu size={24} />
-          </button>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="lg:ml-54 pt-16 min-h-screen transition-all duration-300">
         <div className="p-4 lg:p-6">
-          <Outlet />
+          <Outlet context={{ setNavbarConfig }} />
         </div>
       </div>
     </div>
