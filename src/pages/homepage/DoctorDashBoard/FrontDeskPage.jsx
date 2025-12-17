@@ -290,9 +290,9 @@ export default function FrontDeskPage() {
         isOpen: true,
         title: 'Delete Messages?',
         message: `Do you want to delete these message(s) for everyone or just for yourself?`,
-        confirmText: "Delete for Everyone",
+        confirmText: "Everyone",
         onConfirm: handleDeleteForEveryone,
-        secondaryConfirmText: "Delete for Me",
+        secondaryConfirmText: "Me",
         onSecondaryConfirm: handleDeleteForMe,
         cancelText: "Cancel",
         type: "danger"
