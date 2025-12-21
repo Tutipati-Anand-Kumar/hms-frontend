@@ -1,35 +1,55 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Chart from "react-apexcharts";
 
 const AnalyticsPage = () => {
     const ApexChart = Chart.default || Chart;
 
+    const [isDark, setIsDark] = useState(
+        document.documentElement.getAttribute("data-theme") === "dark" ||
+        localStorage.getItem("theme") === "dark"
+    );
+
+    useEffect(() => {
+        const handleThemeChange = () => {
+            setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
+        };
+
+        window.addEventListener("themeChange", handleThemeChange);
+        return () => window.removeEventListener("themeChange", handleThemeChange);
+    }, []);
+
+    const chartTextColor = isDark ? "#94a3b8" : "#64748b"; // slate-400 : slate-500
+    const chartMode = isDark ? "dark" : "light";
+    const gridColor = isDark ? "#334155" : "#e2e8f0"; // slate-700 : slate-200
+
     // Dummy ApexCharts Data
     const weeklyVisits = {
-        series: [
-            {
-                name: "Patients",
-                data: [10, 15, 12, 20, 25, 30, 18],
-            },
-        ],
+        series: [{ name: "Patients", data: [10, 15, 12, 20, 25, 30, 18] }],
         options: {
-            chart: { id: "weekly-visits", foreColor: "#fff" },
+            chart: {
+                id: "weekly-visits",
+                foreColor: chartTextColor,
+                toolbar: { show: false }
+            },
             xaxis: { categories: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] },
-            theme: { mode: "light" },
+            theme: { mode: chartMode },
+            grid: { borderColor: gridColor },
+            stroke: { curve: 'smooth', width: 3 }
         },
     };
 
     const revenue = {
-        series: [
-            {
-                name: "Revenue",
-                data: [15000, 22000, 18000, 30000, 28000, 32000],
-            },
-        ],
+        series: [{ name: "Revenue", data: [15000, 22000, 18000, 30000, 28000, 32000] }],
         options: {
-            chart: { id: "revenue-chart", foreColor: "#fff" },
+            chart: {
+                id: "revenue-chart",
+                foreColor: chartTextColor,
+                toolbar: { show: false }
+            },
             xaxis: { categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"] },
-            theme: { mode: "light" },
+            theme: { mode: chartMode },
+            grid: { borderColor: gridColor },
+            colors: ["#3b82f6"]
         },
     };
 
@@ -37,99 +57,66 @@ const AnalyticsPage = () => {
         series: [40, 25, 15, 10, 10],
         options: {
             labels: ["Diabetes", "Hypertension", "Cardiac", "Thyroid", "Other"],
-            chart: { type: "donut", foreColor: "#fff" },
-            theme: { mode: "light" },
+            chart: { type: "donut", foreColor: chartTextColor },
+            theme: { mode: chartMode },
+            stroke: { colors: [isDark ? "#1e293b" : "#fff"] },
+            legend: { position: 'bottom', labels: { colors: chartTextColor } }
         },
     };
 
     const ageGroups = {
-        series: [15, 20, 25, 30, 10], // Adjusted data to match visual proportions roughly
+        series: [15, 20, 25, 30, 10],
         options: {
             labels: ["0–18", "19–30", "31–45", "46–60", "60+"],
             chart: {
                 type: "polarArea",
-                foreColor: "#fff",
+                foreColor: chartTextColor,
                 toolbar: { show: false }
             },
-            colors: ["#0f5288", "#229f44", "#12808c", "#34d399", "#facc15"], // Colors matching the image
-            stroke: {
-                colors: ["#fff"]
-            },
-            fill: {
-                opacity: 0.9
-            },
-            legend: {
-                position: 'top',
-                horizontalAlign: 'center',
-                itemMargin: {
-                    horizontal: 10,
-                    vertical: 5
-                }
-            },
-            theme: { mode: "light"||"light" },
+            colors: ["#3b82f6", "#10b981", "#6366f1", "#f59e0b", "#ef4444"],
+            stroke: { colors: [isDark ? "#1e293b" : "#fff"] },
+            fill: { opacity: 0.8 },
+            legend: { position: 'bottom', labels: { colors: chartTextColor } },
+            theme: { mode: chartMode },
             plotOptions: {
                 polarArea: {
-                    rings: {
-                        strokeWidth: 1,
-                        strokeColor: '#333'
-                    },
-                    spokes: {
-                        strokeWidth: 1,
-                        connectorColors: '#333'
-                    }
+                    rings: { strokeWidth: 1, strokeColor: gridColor },
+                    spokes: { strokeWidth: 1, connectorColors: gridColor }
                 }
             }
         },
     };
 
     const performanceMetrics = {
-        series: [{
-            name: 'Score',
-            data: [80, 90, 85, 95, 88],
-        }],
+        series: [{ name: 'Score', data: [80, 90, 85, 95, 88] }],
         options: {
             chart: {
                 height: 350,
                 type: 'radar',
-                foreColor: '#fff',
+                foreColor: chartTextColor,
                 toolbar: { show: false }
             },
             labels: ['Satisfaction', 'Communication', 'Diagnosis', 'Punctuality', 'Follow-up'],
-            stroke: {
-                width: 2,
-                colors: ['#3b82f6']
-            },
-            fill: {
-                opacity: 0.4,
-                colors: ['#3b82f6']
-            },
-            markers: {
-                size: 4,
-                colors: ['#fff'],
-                strokeColors: '#3b82f6',
-                strokeWidth: 2,
-            },
-            yaxis: {
-                show: false,
-            },
+            stroke: { width: 2, colors: ['#3b82f6'] },
+            fill: { opacity: 0.4, colors: ['#3b82f6'] },
+            markers: { size: 4, colors: [isDark ? '#1e293b' : '#fff'], strokeColors: '#3b82f6', strokeWidth: 2 },
+            yaxis: { show: false },
             xaxis: {
                 labels: {
                     style: {
-                        colors: ["#fff", "#fff", "#fff", "#fff", "#fff"],
+                        colors: Array(5).fill(chartTextColor),
                         fontSize: "12px",
                         fontFamily: "Inter, sans-serif"
                     }
                 }
             },
-            theme: { mode: "light" },
+            theme: { mode: chartMode },
             plotOptions: {
                 radar: {
                     polygons: {
-                        strokeColors: '#333',
-                        connectorColors: '#333',
-                        fill: {
-                            colors: undefined
-                        }
+                        strokeColors: gridColor,
+                        connectorColors: gridColor,
+                        fill: { colors: undefined }
                     }
                 }
             }

@@ -59,7 +59,6 @@ const HelpDesk = () => {
   const helpDeskMenu = [
     { icon: "/dashboard.png", label: "Dashboard", path: "/helpdesk" },
     { icon: "/assets/app.png", label: "Manage Appointments", path: "/helpdesk/appointments" },
-    { icon: "/assets/user.png", label: "My Profile", path: "/helpdesk/profile" },
     { icon: "/assets/mail.png", label: "Messages", path: "/helpdesk/messages" },
     { icon: "/assets/doctor.png", label: "Add Doctor", path: "/helpdesk/create-doctor" },
     { icon: "/assets/app.png", label: "Leaves", path: "/helpdesk/leaves" },
