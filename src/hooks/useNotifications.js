@@ -14,7 +14,7 @@ export const useNotifications = () => {
             const { data } = await API.get('/notifications');
 
             setNotifications(prev => {
-               
+
                 const newUnreadCount = data.filter(n => !n.isRead).length;
                 const prevUnreadCount = prev.filter(n => !n.isRead).length;
 
@@ -95,11 +95,15 @@ export const useNotifications = () => {
     }, [notifications]);
 
     const handleDelete = async (id) => {
+        // Optimistic update
+        setNotifications(prev => prev.filter(n => n._id !== id));
+
         try {
             await API.delete(`/notifications/${id}`);
-            setNotifications(prev => prev.filter(n => n._id !== id));
         } catch (error) {
-            console.error("Failed to auto-delete notification", error);
+            console.error("Failed to delete notification", error);
+            // Revert on failure
+            fetchNotifications(false);
         }
     };
 

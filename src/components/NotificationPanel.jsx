@@ -8,6 +8,8 @@ const SwipeableNotificationItem = ({ notification, onMarkRead, onDelete }) => {
     const [opacity, setOpacity] = useState(1);
     const [isSwiping, setIsSwiping] = useState(false);
 
+    const [isDeleting, setIsDeleting] = useState(false);
+
     // Threshold to trigger delete
     const DELETE_THRESHOLD = 100;
 
@@ -46,14 +48,12 @@ const SwipeableNotificationItem = ({ notification, onMarkRead, onDelete }) => {
     const handleTouchEnd = () => {
         if (Math.abs(translateX) > DELETE_THRESHOLD) {
             // Trigger Delete
-            // Slide completely off screen visuals first? Or just call delete
-            // For smoother UX, maybe animate off, but calling onDelete directly works too 
-            // as data update will remove the item.
             setTranslateX(translateX > 0 ? 500 : -500); // Throw it away visual
             setOpacity(0);
+            setIsDeleting(true);
             setTimeout(() => {
                 onDelete(notification._id);
-            }, 200);
+            }, 100); // Reduced delay for snappier feel
         } else {
             // Reset
             setTranslateX(0);
@@ -64,28 +64,31 @@ const SwipeableNotificationItem = ({ notification, onMarkRead, onDelete }) => {
 
     return (
         <li
-            className={`p-4 transition-colors cursor-pointer hover:opacity-90 group relative overflow-hidden`}
+            className={`transition-all duration-300 cursor-pointer hover:opacity-90 group relative overflow-hidden`}
             style={{
                 backgroundColor: !notification.isRead ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-                borderBottom: '1px solid var(--border-color)',
+                borderBottom: isDeleting ? 'none' : '1px solid var(--border-color)',
                 transform: `translateX(${translateX}px)`,
                 opacity: opacity,
-                transition: isSwiping ? 'none' : 'transform 0.3s ease, opacity 0.3s ease',
+                maxHeight: isDeleting ? '0px' : '200px',
+                padding: isDeleting ? '0px' : '1rem',
+                margin: '0',
+                transition: isSwiping ? 'none' : 'transform 0.3s ease, opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease',
                 touchAction: 'pan-y' // Vital: Allow vertical scroll but let JS handle horizontal
             }}
             onClick={() => onMarkRead(notification._id)}
             onMouseEnter={(e) => {
                 // Only apply hover bg if not swiping/moved
-                if (translateX === 0) e.currentTarget.style.backgroundColor = !notification.isRead ? 'rgba(37, 99, 235, 0.15)' : 'var(--border-color)'
+                if (translateX === 0 && !isDeleting) e.currentTarget.style.backgroundColor = !notification.isRead ? 'rgba(37, 99, 235, 0.15)' : 'var(--border-color)'
             }}
             onMouseLeave={(e) => {
-                if (translateX === 0) e.currentTarget.style.backgroundColor = !notification.isRead ? 'rgba(37, 99, 235, 0.1)' : 'transparent'
+                if (translateX === 0 && !isDeleting) e.currentTarget.style.backgroundColor = !notification.isRead ? 'rgba(37, 99, 235, 0.1)' : 'transparent'
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
-            <div className="flex gap-3 pr-6"> {/* Added padding right for delete button */}
+            <div className={`flex gap-3 pr-6 ${isDeleting ? 'invisible' : ''}`}> {/* Hide content when collapsing */}
                 <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${!notification.isRead ? 'bg-blue-500' : 'bg-transparent'}`} />
                 <div className="flex-1">
                     <p className={`text-sm ${!notification.isRead ? 'font-semibold' : ''}`} style={{ color: 'var(--text-color)' }}>
@@ -105,7 +108,10 @@ const SwipeableNotificationItem = ({ notification, onMarkRead, onDelete }) => {
                 <button
                     onClick={(e) => {
                         e.stopPropagation(); // Prevent marking as read when deleting
-                        onDelete(notification._id);
+                        setIsDeleting(true);
+                        setTimeout(() => {
+                            onDelete(notification._id);
+                        }, 100);
                     }}
                     className="absolute top-2 right-2 p-1 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
                     title="Delete notification"
