@@ -75,6 +75,16 @@
 
   --heading-font: "inter", sans-serif;
   --body-font: "quicksand", sans-serif;
+
+  /* BUBBLE & SELECTION COLORS */
+  --sender-bg: #d9fdd3;
+  --sender-text: #0f172a;
+  --selection-bg: transparent;
+  --selection-text: inherit;
+  --selection-border: #3b82f6;
+
+  --menu-bg: #ffffff;
+  --menu-item-hover: #f3f4f6;
 }
 
 html,
@@ -111,6 +121,17 @@ h6,
   /* slate-900 */
   --navbar-bg: #1e293b;
   /* slate-800 */
+
+  --sender-bg: #056162;
+  --sender-text: #f8fafc;
+  --selection-bg: rgba(59, 130, 246, 0.2);
+  --selection-text: #ffffff;
+  --selection-border: #60a5fa;
+
+  --menu-bg: #334155;
+  /* slate-700 */
+  --menu-item-hover: #475569;
+  /* slate-600 */
 }
 
 /* GLOBAL FONTS */

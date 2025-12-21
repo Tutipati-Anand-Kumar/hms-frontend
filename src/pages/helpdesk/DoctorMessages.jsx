@@ -31,6 +31,9 @@ export default function DoctorMessages() {
     const [selectedMessages, setSelectedMessages] = useState(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [isTouch, setIsTouch] = useState(false);
+    const [swipeX, setSwipeX] = useState(0);
+    const [swipingId, setSwipingId] = useState(null);
+    const touchStartPos = useRef({ x: 0, y: 0 });
 
     const socketRef = useRef();
     const messagesEndRef = useRef(null);
@@ -164,40 +167,88 @@ export default function DoctorMessages() {
     const handleSendMessage = async () => {
         if (!newMessage.trim() || !selectedDoctor) return;
 
+        const content = newMessage;
         if (editingMessage) {
+            // Optimistic Edit
+            const originalMessages = [...messages];
+            const originalMsg = editingMessage;
+            setMessages(prev => prev.map(msg => msg._id === editingMessage._id ? { ...msg, content, isEdited: true } : msg));
+            setNewMessage("");
+            setEditingMessage(null);
+
             try {
-                const res = await API.put(`/messages/${editingMessage._id}`, { content: newMessage });
-                setMessages(prev => prev.map(msg => msg._id === editingMessage._id ? res.data : msg));
-                setNewMessage("");
-                setEditingMessage(null);
-            } catch (err) { console.error("Edit failed", err); }
+                const res = await API.put(`/messages/${originalMsg._id}`, { content });
+                // Sync with server response
+                setMessages(prev => prev.map(msg => msg._id === originalMsg._id ? res.data : msg));
+            } catch (err) {
+                console.error("Edit failed", err);
+                setMessages(originalMessages);
+            }
             return;
         }
+
+        // Optimistic New Message
+        const tempId = Date.now().toString();
+        const tempMsg = {
+            _id: tempId,
+            content,
+            sender: user.id,
+            receiver: selectedDoctor._id,
+            createdAt: new Date().toISOString(),
+            isPending: true,
+            replyTo: replyingTo ? { _id: replyingTo._id, content: replyingTo.content, senderName: replyingTo.senderName } : null
+        };
+
+        setMessages(prev => [...prev, tempMsg]);
+        setNewMessage("");
+        setReplyingTo(null);
+        scrollToBottom();
 
         try {
             const payload = {
                 receiverId: selectedDoctor._id,
-                content: newMessage,
-                replyTo: replyingTo ? replyingTo._id : null
+                content,
+                replyTo: tempMsg.replyTo ? tempMsg.replyTo._id : null
             };
             const res = await API.post("/messages", payload);
-            setMessages([...messages, res.data]);
-            setNewMessage("");
-            setReplyingTo(null);
-            scrollToBottom();
+            // Replace temp message with real one
+            setMessages(prev => prev.map(m => m._id === tempId ? res.data : m));
             fetchConversations();
         } catch (err) {
             console.error("Send failed", err);
+            // Remove temp message on failure
+            setMessages(prev => prev.filter(m => m._id !== tempId));
         }
     };
 
     const handleReaction = async (msgId, emoji) => {
+        // Optimistic Reaction
+        const originalMessages = [...messages];
+        setMessages(prev => prev.map(m => {
+            if (m._id === msgId) {
+                const existingReactions = m.reactions || [];
+                // Check if user already reacted with this emoji
+                const hasReacted = existingReactions.some(r => r.emoji === emoji && (r.user?._id === user.id || r.user === user.id));
+
+                let newReactions;
+                if (hasReacted) {
+                    newReactions = existingReactions.filter(r => !(r.emoji === emoji && (r.user?._id === user.id || r.user === user.id)));
+                } else {
+                    newReactions = [...existingReactions, { emoji, user: { _id: user.id } }];
+                }
+                return { ...m, reactions: newReactions };
+            }
+            return m;
+        }));
+        setActiveReactionId(null); // Immediate close for better feel
+
         try {
             const res = await API.post(`/messages/${msgId}/react`, { emoji });
-            // Socket usually handles update, but fast local update is good
+            // Sync with server response for full correctness
             setMessages(prev => prev.map(m => m._id === msgId ? res.data : m));
         } catch (err) {
             console.error("Reaction failed", err);
+            setMessages(originalMessages);
         }
     };
 
@@ -377,15 +428,15 @@ export default function DoctorMessages() {
             />
 
             {/* Sidebar - Doctors List */}
-            <div className={`w-full md:w-80 lg:w-96 border-r flex flex-col bg-white dark:bg-gray-800 ${selectedDoctor ? "hidden md:flex" : "flex"}`} style={{ borderColor: 'var(--border-color)' }}>
-                <div className="p-4 border-b dark:border-gray-700">
-                    <h2 className="text-xl font-bold mb-4">Messages</h2>
-                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center px-3 py-2">
+            <div className={`w-full md:w-80 lg:w-96 border-r flex flex-col bg-[var(--sidebar-bg)] ${selectedDoctor ? "hidden md:flex" : "flex"}`} style={{ borderColor: 'var(--border-color)' }}>
+                <div className="p-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
+                    <h2 className="text-xl font-bold mb-4 text-[var(--text-color)]">Messages</h2>
+                    <div className="rounded-lg flex items-center px-3 py-2 bg-[var(--card-bg)]">
                         <FaSearch className="text-gray-500 mr-2" />
                         <input
                             type="text"
                             placeholder="Search doctors..."
-                            className="bg-transparent border-none focus:outline-none text-sm w-full dark:text-gray-200"
+                            className="bg-transparent border-none focus:outline-none text-sm w-full text-[var(--text-color)]"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -402,7 +453,8 @@ export default function DoctorMessages() {
                             <div
                                 key={conv._id}
                                 onClick={() => handleSelectDoctor(conv.user)}
-                                className={`p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b dark:border-gray-800 ${selectedDoctor?._id === conv.user?._id ? "bg-blue-50 dark:bg-gray-700/50" : ""}`}
+                                className={`p-4 flex items-center gap-3 hover:bg-[var(--card-bg)] cursor-pointer transition-colors border-b ${selectedDoctor?._id === conv.user?._id ? "bg-[var(--card-bg)] opacity-80" : ""}`}
+                                style={{ borderColor: 'var(--border-color)' }}
                             >
                                 <div className={`w-12 h-12 rounded-full overflow-hidden border ${selectedDoctor?._id === conv.user?._id ? 'border-blue-500' : 'border-transparent'}`}>
                                     {conv.user?.avatar && conv.user?.avatar !== "/avatar.png" ? (
@@ -415,10 +467,10 @@ export default function DoctorMessages() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-baseline mb-1">
-                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{conv.user?.name}</h3>
+                                        <h3 className="font-semibold text-[var(--text-color)] truncate">{conv.user?.name}</h3>
                                         {/* Last message time could go here */}
                                     </div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                    <p className="text-sm opacity-60 truncate text-[var(--text-color)]">
                                         Click to view chat
                                     </p>
                                 </div>
@@ -429,19 +481,19 @@ export default function DoctorMessages() {
             </div>
 
             {/* Chat Area */}
-            <div className={`flex-1 flex flex-col h-full relative ${selectedDoctor ? "flex" : "hidden md:flex items-center justify-center bg-gray-50 dark:bg-gray-900"}`}>
+            <div className={`flex-1 flex flex-col h-full relative ${selectedDoctor ? "flex" : "hidden md:flex items-center justify-center bg-[var(--bg-color)]"}`}>
                 {!selectedDoctor ? (
                     <div className="text-center p-8">
                         <img src="/assets/chat-placeholder.png" alt="Select Chat" className="w-64 mx-auto mb-4 opacity-50" />
-                        <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300">Select a conversation</h3>
-                        <p className="text-gray-500 max-w-sm mx-auto mt-2">Choose a doctor from the list to start messaging or view history.</p>
+                        <h3 className="text-xl font-semibold text-[var(--text-color)]">Select a conversation</h3>
+                        <p className="max-w-sm mx-auto mt-2 opacity-60 text-[var(--text-color)]">Choose a doctor from the list to start messaging or view history.</p>
                     </div>
                 ) : (
                     <>
                         {/* Chat Header */}
                         {!isSelectionMode && (
-                            <div className="p-3 flex items-center gap-3 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm z-10">
-                                <button onClick={() => setSelectedDoctor(null)} className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                            <div className="p-3 flex items-center gap-3 bg-[var(--navbar-bg)] border-b shadow-sm z-10" style={{ borderColor: 'var(--border-color)' }}>
+                                <button onClick={() => setSelectedDoctor(null)} className="md:hidden p-2 hover:bg-[var(--card-bg)] rounded-full text-[var(--text-color)]">
                                     <FaArrowLeft />
                                 </button>
                                 <div className="w-10 h-10 rounded-full overflow-hidden">
@@ -453,8 +505,8 @@ export default function DoctorMessages() {
                                         </div>
                                     )}
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-900 dark:text-white">{selectedDoctor.name}</h3>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold truncate text-[var(--text-color)]">{selectedDoctor.name}</h3>
                                     <p className="text-xs text-green-500 font-semibold flex items-center gap-1">
                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
                                     </p>
@@ -474,21 +526,57 @@ export default function DoctorMessages() {
                                     return (
                                         <div
                                             key={index}
-                                            className={`flex ${isMe ? "justify-end" : "justify-start"} group relative mb-1 touch-manipulation transition-all duration-200`}
+                                            className={`flex ${isMe ? "justify-end" : "justify-start"} group relative mb-1 mt-3 touch-manipulation transition-all duration-200`}
                                             onClick={() => handleMessageClick(msg._id)}
-                                            onTouchStart={() => { longPressTimer.current = setTimeout(() => handleMessageLongPress(msg._id), 500); }}
-                                            onTouchEnd={() => clearTimeout(longPressTimer.current)}
+                                            onTouchStart={(e) => {
+                                                if (isSelectionMode) return;
+                                                longPressTimer.current = setTimeout(() => handleMessageLongPress(msg._id), 500);
+                                                touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                                                setSwipingId(msg._id);
+                                            }}
+                                            onTouchMove={(e) => {
+                                                if (isSelectionMode || !swipingId) return;
+                                                const deltaX = e.touches[0].clientX - touchStartPos.current.x;
+                                                const deltaY = Math.abs(e.touches[0].clientY - touchStartPos.current.y);
+
+                                                // Ensure horizontal swipe dominance for high-performance feel
+                                                if (deltaX > 0 && deltaX > deltaY * 1.5) {
+                                                    clearTimeout(longPressTimer.current);
+                                                    setSwipeX(Math.min(deltaX, 80)); // Limit swipe distance
+                                                }
+                                            }}
+                                            onTouchEnd={() => {
+                                                clearTimeout(longPressTimer.current);
+                                                if (swipeX > 50 && !msg.isDeleted) {
+                                                    setReplyingTo(msg);
+                                                    inputRef.current?.focus();
+                                                }
+                                                setSwipeX(0);
+                                                setSwipingId(null);
+                                            }}
                                             onMouseDown={() => { if (!isSelectionMode) longPressTimer.current = setTimeout(() => handleMessageLongPress(msg._id), 500); }}
                                             onMouseUp={() => clearTimeout(longPressTimer.current)}
                                         >
-                                            <div className={`max-w-[85%] md:max-w-[65%] relative rounded-lg transition-all duration-200 ${isSelected ? 'bg-blue-500/10 dark:bg-blue-400/20 shadow-[inset_0_0_0_2px_rgba(59,130,246,0.5)]' : ''}`}>
+                                            {/* Swipe Backdrop Icon */}
+                                            {swipingId === msg._id && swipeX > 15 && (
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 opacity-70 animate-in fade-in zoom-in duration-200">
+                                                    <FaReply size={Math.min(12 + swipeX / 4, 18)} className={swipeX > 50 ? 'scale-110' : ''} />
+                                                </div>
+                                            )}
 
+                                            <div
+                                                className={`max-w-[85%] md:max-w-[65%] relative rounded-lg transition-all duration-200 ${isSelected ? 'bg-blue-500/10 dark:bg-blue-400/20 shadow-[inset_0_0_0_2px_rgba(59,130,246,0.5)]' : ''}`}
+                                                style={{ transform: swipingId === msg._id ? `translateX(${swipeX}px)` : 'none' }}
+                                            >
                                                 {/* Message Bubble */}
                                                 <div
-                                                    className={`px-3 py-1.5 rounded-lg shadow-sm border text-sm relative 
-                                            ${isMe ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100 rounded-tr-none border-transparent" : "bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 rounded-tl-none border-transparent"}
-                                            ${isSelected ? 'opacity-90 mix-blend-multiply dark:mix-blend-screen' : ''}`}
-                                                    style={{ wordWrap: 'break-word' }}
+                                                    className={`px-3 py-1.5 rounded-lg shadow-sm border text-sm relative transition-all duration-200
+                                            ${isMe ? "bg-[var(--sender-bg)] text-[var(--sender-text)] rounded-tr-none" : "bg-[var(--card-bg)] text-[var(--text-color)] rounded-tl-none"}
+                                            ${isSelected ? 'bg-[var(--selection-bg)] !text-[var(--selection-text)] shadow-lg scale-[1.01]' : 'border-transparent'}`}
+                                                    style={{
+                                                        wordWrap: 'break-word',
+                                                        borderColor: isSelected ? 'var(--selection-border)' : 'transparent'
+                                                    }}
                                                 >
                                                     {/* Reply Quote */}
                                                     {msg.replyTo && !msg.isDeleted && (
@@ -514,32 +602,32 @@ export default function DoctorMessages() {
                                                 </div>
 
                                                 {/* Hover Menu (Actions Only - No Reactions) */}
-                                                {!isSelectionMode && !msg.isDeleted && (
-                                                    <div className={`absolute -top-3 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} hidden group-hover:flex items-center gap-1 bg-white dark:bg-gray-700 shadow-md rounded-full px-2 py-1 z-20`}>
-                                                        <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); inputRef.current?.focus(); setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full text-gray-600 dark:text-gray-300" title="Reply">
+                                                {!isSelectionMode && !msg.isDeleted && !msg.isPending && (
+                                                    <div className={`absolute -top-3 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} hidden group-hover:flex items-center gap-1 bg-[var(--menu-bg)] shadow-md rounded-full px-2 py-1 z-20`}>
+                                                        <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); inputRef.current?.focus(); setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100); }} className={`p-1.5 hover:bg-[var(--menu-item-hover)] rounded-full text-[var(--text-color)] opacity-70`} title="Reply">
                                                             <FaReply size={12} />
                                                         </button>
                                                         {isMe && (new Date() - new Date(msg.createdAt) < 24 * 60 * 60 * 1000) && (
-                                                            <button onClick={(e) => { e.stopPropagation(); setEditingMessage(msg); setNewMessage(msg.content); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full text-blue-500" title="Edit">
+                                                            <button onClick={(e) => { e.stopPropagation(); setEditingMessage(msg); setNewMessage(msg.content); }} className="p-1.5 hover:bg-[var(--menu-item-hover)] rounded-full text-blue-500" title="Edit">
                                                                 <FaPen size={12} />
                                                             </button>
                                                         )}
-                                                        <button onClick={(e) => { e.stopPropagation(); handleSingleDelete(msg._id); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full text-red-500" title="Delete">
+                                                        <button onClick={(e) => { e.stopPropagation(); handleSingleDelete(msg._id); }} className="p-1.5 hover:bg-red-200/30 rounded-full text-red-500" title="Delete">
                                                             <FaTrash size={12} />
                                                         </button>
-                                                        <button onClick={(e) => { e.stopPropagation(); setIsSelectionMode(true); toggleSelection(msg._id); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full text-green-500" title="Select">
+                                                        <button onClick={(e) => { e.stopPropagation(); setIsSelectionMode(true); toggleSelection(msg._id); }} className="p-1.5 hover:bg-[var(--menu-item-hover)] rounded-full text-green-500" title="Select">
                                                             <FaCheckCircle size={12} />
                                                         </button>
                                                     </div>
                                                 )}
 
                                                 {/* Click-triggered Reaction Picker */}
-                                                {activeReactionId === msg._id && !isSelectionMode && !msg.isDeleted && (
-                                                    <div className={`absolute -top-10 ${isMe ? 'right-0' : 'left-0'} flex items-center gap-0.5 bg-white dark:bg-gray-700 shadow-lg rounded-full px-3 py-1.5 z-30 animate-in fade-in zoom-in duration-200`}>
+                                                {activeReactionId === msg._id && !isSelectionMode && !msg.isDeleted && !msg.isPending && (
+                                                    <div className={`absolute -top-10 ${isMe ? 'right-0' : 'left-0'} flex items-center gap-0.5 bg-[var(--menu-bg)] shadow-lg rounded-full px-3 py-1.5 z-30 animate-in fade-in zoom-in duration-200`}>
                                                         {["👍", "❤️", "😂", "😮", "😢", "🙏"].map(emoji => (
                                                             <button
                                                                 key={emoji}
-                                                                onClick={(e) => { e.stopPropagation(); handleReaction(msg._id, emoji); setActiveReactionId(null); }}
+                                                                onClick={(e) => { e.stopPropagation(); handleReaction(msg._id, emoji); }}
                                                                 className="hover:scale-125 transition-transform p-1 text-xl"
                                                             >
                                                                 {emoji}
@@ -549,8 +637,8 @@ export default function DoctorMessages() {
                                                 )}
                                                 {/* Tombstone Hover Delete (For "This message was deleted") */}
                                                 {!isSelectionMode && msg.isDeleted && (
-                                                    <div className={`absolute -top-3 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} hidden group-hover:block bg-white dark:bg-gray-700 shadow-md rounded-full px-2 py-1 z-20`}>
-                                                        <button onClick={(e) => { e.stopPropagation(); handleSingleDelete(msg._id); }} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full text-red-500" title="Delete from view">
+                                                    <div className={`absolute -top-3 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} hidden group-hover:block bg-[var(--menu-bg)] shadow-md rounded-full px-2 py-1 z-20`}>
+                                                        <button onClick={(e) => { e.stopPropagation(); handleSingleDelete(msg._id); }} className="p-1.5 hover:bg-red-200/30 rounded-full text-red-500" title="Delete from view">
                                                             <FaTrash size={12} />
                                                         </button>
                                                     </div>
@@ -558,11 +646,11 @@ export default function DoctorMessages() {
 
                                                 {/* Reactions Display (On Bubble) - No Border */}
                                                 {msg.reactions && msg.reactions.length > 0 && !msg.isDeleted && (
-                                                    <div className={`absolute -top-2 ${isMe ? 'left-0 -translate-x-2' : 'right-0 translate-x-2'} flex items-center bg-white dark:bg-gray-800 rounded-full px-1 shadow-sm z-10 scale-75`}>
+                                                    <div className={`absolute -top-2 ${isMe ? 'left-0 -translate-x-2' : 'right-0 translate-x-2'} flex items-center rounded-full px-1 shadow-sm z-10 scale-125`}>
                                                         {Array.from(new Set(msg.reactions.map(r => r.emoji))).slice(0, 3).map((e, i) => (
                                                             <span key={i} className="text-xs">{e}</span>
                                                         ))}
-                                                        {msg.reactions.length > 1 && <span className="text-[8px] text-gray-500 ml-0.5">{msg.reactions.length}</span>}
+                                                        {msg.reactions.length > 1 && <span className="text-[8px] text-[var(--text-color)] opacity-60 ml-0.5">{msg.reactions.length}</span>}
                                                     </div>
                                                 )}
                                             </div>
@@ -575,36 +663,36 @@ export default function DoctorMessages() {
 
                         {/* Reply/Edit Previews */}
                         {replyingTo && (
-                            <div className="px-4 py-2 border-t dark:bg-gray-800 flex justify-between items-center bg-gray-50 dark:bg-[#202c33] border-l-4 border-l-blue-500 mx-2 mt-2 rounded-r-lg" style={{ borderColor: 'var(--border-color)' }}>
+                            <div className="px-4 py-2 border-t dark:bg-gray-800 flex justify-between items-center dark:bg-[#202c33] border-l-4 border-l-blue-500 mx-2 mt-2 rounded-r-lg" style={{ borderColor: 'var(--border-color)' }}>
                                 <div className="flex-1 overflow-hidden">
                                     <p className="text-xs text-blue-500 font-bold mb-0.5">Replying to {replyingTo.sender === user.id ? 'Yourself' : selectedDoctor.name}</p>
                                     <p className="text-sm truncate text-gray-600 dark:text-gray-300">{replyingTo.content}</p>
                                 </div>
-                                <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
+                                <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-gray-500 dark:hover:bg-gray-700 rounded-full transition-colors">
                                     <FaTimes size={14} />
                                 </button>
                             </div>
                         )}
 
                         {editingMessage && (
-                            <div className="px-4 py-2 border-t dark:bg-gray-800 flex justify-between items-center bg-blue-50 dark:bg-[#202c33] border-l-4 border-l-green-500 mx-2 mt-2 rounded-r-lg" style={{ borderColor: 'var(--border-color)' }}>
+                            <div className="px-4 py-2 border-t dark:bg-gray-800 flex justify-between items-center dark:bg-[#202c33] border-l-4 border-l-green-500 mx-2 mt-2 rounded-r-lg" style={{ borderColor: 'var(--border-color)' }}>
                                 <div className="flex-1 overflow-hidden">
                                     <p className="text-xs text-green-500 font-bold flex items-center gap-1 mb-0.5"><FaPen size={10} /> Editing Message</p>
                                     <p className="text-sm truncate text-gray-600 dark:text-gray-300">{editingMessage.content}</p>
                                 </div>
-                                <button onClick={() => { setEditingMessage(null); setNewMessage(""); }} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
+                                <button onClick={() => { setEditingMessage(null); setNewMessage(""); }} className="p-2 hover:bg-gray-500 dark:hover:bg-gray-700 rounded-full transition-colors">
                                     <FaTimes size={14} />
                                 </button>
                             </div>
                         )}
 
                         {/* Input Area */}
-                        <div className="p-3 bg-gray-100 dark:bg-[#202c33] flex items-end gap-2 z-20">
-                            <div className="flex-1 bg-white dark:bg-[#2a3942] rounded-2xl flex items-center px-4 py-2 shadow-sm border border-transparent focus-within:border-green-500 transition-all">
+                        <div className="p-3 flex items-end gap-2 z-20 bg-[var(--bg-color)]">
+                            <div className="flex-1 rounded-2xl flex items-center px-4 py-2 shadow-sm border border-transparent focus-within:border-green-500 transition-all bg-[var(--card-bg)]">
                                 <input
                                     ref={inputRef}
                                     type="text"
-                                    className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-500 max-h-32 overflow-y-auto outline-none"
+                                    className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-gray-500 max-h-32 overflow-y-auto outline-none text-[var(--text-color)]"
                                     placeholder="Type a message..."
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
